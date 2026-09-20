@@ -142,6 +142,15 @@ From branch \"emacs-26\", added for compatibility.
   "Hook to run when `org-journal-mode' is loaded."
   :type 'hook)
 
+(defcustom org-journal-display-type nil
+  "What type of journal file to emulate, despite writing a different format.
+
+This lets you, for example, store your journal as a yearly file but only display one week at a time. This value needs to be shorter than org-journal-file-type (or else you'll just waste cpu cycles). If nil, it is ignored. If a display type unit crosses a boundary of the file type unit (e.g. a year that begins in the middle of a week) you will only see the part stored in the current file."
+  :type '(choice
+          (const :tag "Daily" daily)
+          (const :tag "Weekly" weekly)
+          (const :tag "Monthly" monthly)))
+
 (defcustom org-journal-file-type 'daily
   "What type of journal file to create.
 
@@ -491,6 +500,8 @@ The key is a journal date entry, and the value of the key is of the form
 (when (and (stringp org-journal-prefix-key) (not (string-empty-p org-journal-prefix-key)))
   (let ((command-table '(("f" . org-journal-next-entry)
                          ("b" . org-journal-previous-entry)
+                         ("S-f" . org-journal-next-display-type)
+                         ("S-b" . org-journal-previous-display-type)
                          ("j" . org-journal-new-entry)
                          ("s" . org-journal-search)))
         (key-func (if (string-prefix-p "\\" org-journal-prefix-key)
@@ -546,9 +557,10 @@ before it will be deposed."
 
 (defun org-journal-after-save-hook ()
   "Update agenda files and dates."
+  (save-restriction (widen)
   (org-journal--update-org-agenda-files)
   (org-journal--dates-puthash)
-  (org-journal--serialize))
+  (org-journal--serialize)))
 
 (defun org-journal-is-journal ()
   "Determine if file is a journal file."
@@ -615,7 +627,7 @@ Convert OLD-FORMAT or input to `org-journal-created-property-timestamp-format'."
           (unless buffer-modefied (save-buffer))
           (unless buffer (kill-buffer)))))))
 
-(defun org-journal--convert-time-to-file-type-time (&optional time)
+(defun org-journal--convert-time-to-file-type-time (journal-type &optional time)
   "Converts TIME to the file type format date.
 
 If `org-journal-file-type' is `weekly', the TIME will be rounded to
@@ -627,7 +639,7 @@ the first date of the month.
 If `org-journal-file-type' is `yearly', the TIME will be rounded to
 the first date of the year."
   (or time (setq time (current-time)))
-  (pcase org-journal-file-type
+  (pcase journal-type
     ;; Do nothing for daily
     (`daily time)
     ;; Round to the monday of the current week, e.g. 20181231 is the first week of 2019
@@ -664,7 +676,7 @@ If no TIME is given, uses the current time."
   (let ((file (file-truename
                (expand-file-name
                 (format-time-string org-journal-file-format
-                                    (org-journal--convert-time-to-file-type-time time))
+                                    (org-journal--convert-time-to-file-type-time org-journal-file-type time))
                 org-journal-dir))))
     (when (and org-journal-encrypt-journal (not (file-exists-p file)))
       (setq file (concat file "." org-journal-encryption-extension)))
@@ -682,6 +694,7 @@ If no TIME is given, uses the current time."
 (defun org-journal--sanity-checks ()
   "Do some sanity checks."
   (unless (symbolp org-journal-file-type)
+  ; REVISIT DJB: add check for new display type
     (user-error
      "The value of `org-journal-file-type' must be symbol, not a %s"
      (type-of org-journal-file-type))))
@@ -849,6 +862,7 @@ hook is run."
     ;; Insure `view-mode' is not active
     (view-mode -1)
 
+    (widen)
     (org-journal--insert-header time)
     (org-journal--insert-entry-header time)
     (org-journal--decrypt)
@@ -871,7 +885,8 @@ hook is run."
       (save-excursion (org-journal--finalize-view)))
 
     (when should-add-entry-p
-      (outline-show-entry))))
+      (outline-show-entry)))
+  (org-journal--narrow-to-display-selection))
 
 (defun org-journal--empty-journal-p (prev-buffer)
   (let (entry)
@@ -1437,7 +1452,9 @@ from oldest to newest."
    (list current-prefix-arg last-nonmenu-event))
   (let* ((time (org-journal--calendar-date->time
                 (calendar-cursor-to-date t event))))
-    (org-journal-read-or-display-entry time nil)))
+    (org-journal-read-or-display-entry time nil)
+    (org-journal--narrow-to-display-selection time)
+    ))
 
 ;;;###autoload
 (defun org-journal-display-entry (_arg &optional event)
@@ -1446,7 +1463,9 @@ from oldest to newest."
    (list current-prefix-arg last-nonmenu-event))
   (let* ((time (org-journal--calendar-date->time
                 (calendar-cursor-to-date t event))))
-    (org-journal-read-or-display-entry time t)))
+    (org-journal-read-or-display-entry time t)
+    (org-journal--narrow-to-display-selection time)
+    ))
 
 (defun org-journal--finalize-view ()
   "Finalize visability of entry."
@@ -1473,6 +1492,7 @@ is nil or avoid switching when NOSELECT is non-nil."
                  ;; Search for journal entry
                  (with-current-buffer buf
                    (save-mark-and-excursion
+                     (widen)
                      (goto-char (point-min))
                      (setq time (decode-time time))
                      (setq point (org-journal--search-forward-created
@@ -1534,13 +1554,42 @@ If prev is non-nil open previous entry instead of next."
 (defun org-journal-next-entry ()
   "Go to the next journal entry."
   (interactive)
-  (org-journal--next-entry))
+  (org-journal--next-entry)
+  (org-journal--narrow-to-display-selection))
 
 ;;;###autoload
 (defun org-journal-previous-entry ()
   "Go to the previous journal entry."
   (interactive)
-  (org-journal--next-entry t))
+  (org-journal--next-entry t)
+  (org-journal--narrow-to-display-selection))
+
+;;;###autoload
+(defun org-journal-next-display-type ()
+  "Go to the next journal display (e.g. next week or month)."
+  (interactive)
+  (org-journal--next-display-type)
+  (org-journal--narrow-to-display-selection))
+
+;;;###autoload
+(defun org-journal-previous-display-type ()
+  "Go to the previous journal display (e.g. prev week or month)."
+  (interactive)
+  (org-journal--next-display-type t)
+  (org-journal--narrow-to-display-selection))
+
+(defun org-journal--next-display-type (&optional prev)
+  "Go to next display.
+
+If prev is non-nil open previous display instead of next."
+  (setq date-to-leave (djb-display-date-from-entry-date))
+  (setq this-date date-to-leave)
+  (setq prev-pointer '0)
+  (while (and (/= prev-pointer (pos-bol)) (equal this-date date-to-leave))
+    (setq prev-pointer (pos-bol))
+    (org-journal--next-entry prev)
+    (setq this-date (djb-display-date-from-entry-date))
+    ))
 
 
 ;;; Journal search facilities
@@ -1850,6 +1899,7 @@ If STR is empty, search for all entries using `org-journal-time-prefix'."
     (dolist (fname (reverse files))
       (setq result (org-journal--with-journal
                        fname
+                     (save-restriction (widen)
                      (when org-journal-enable-encryption
                        (goto-char (point-min))
                        (while (search-forward ":crypt:" nil t)
@@ -1871,7 +1921,7 @@ If STR is empty, search for all entries using `org-journal-time-prefix'."
                          (buffer-substring-no-properties
                           (line-beginning-position)
                           (line-end-position)))
-                        result))
+                        result)))
                      result))
       (when result
         (mapc (lambda (res) (push res results)) result)))
@@ -2021,6 +2071,100 @@ enabling encryption by default."
             'org-journal-encryption-hook
             nil t))
 
+(defun org-journal--narrow-to-display-selection (&optional time)
+  (djb-narrow-to-display-selection))
+
+  
 (provide 'org-journal)
 
 ;;; org-journal.el ends here
+
+(defvar org-journal-display-type nil)
+
+(defun djb-display-date-from-entry-date() (interactive)
+       (if org-journal-display-type
+  (save-excursion
+    (save-restriction
+      (while (>= (org-outline-level) (org-journal--time-entry-level))
+        (org-up-heading-safe))
+      (format-time-string "%Y%m%d" (org-journal--convert-time-to-file-type-time org-journal-display-type (org-journal--calendar-date->time (org-journal--entry-date->calendar-date))))))
+  (message "org-journal-display-type is not set")
+  ))
+
+;(add-hook 'org-journal-after-entry-create-hook 'djb-narrow-to-day)
+;(defun djb-narrow-to-day() (interactive))
+(global-set-key (kbd "<f7>") 'djb-utility)
+
+(defun djb-utility()
+  (interactive)
+  (message (djb-display-date-from-entry-date))
+  (if (equal (point) (point-max)) (message "equal"))
+  )
+
+;; REVISIT: current bugs:
+;; - can't undo after doing a c-c c-j (something about it being invisible)
+
+(defun djb-narrow-to-display-selection() (interactive)
+       (when org-journal-display-type
+         ;(message "Continuing.")
+  ;(if (equal (point) (point-max)) (message "equal"))
+
+  (setq djb-start-point nil)
+  (setq djb-end-point nil)
+  ; save our current location so we can come back to it
+  (save-excursion
+    (save-restriction
+           
+      ; okay we're going to do 3 things
+      ; 1) get the date for the view mode
+      ; 2) move backwards for as long as we keep matching that date
+      ;    - and store that point
+      ; 3) move forwards until we stop matching that date
+      ;    - and store that point
+      ;    - if we failed to move forward, this is the last entry
+      ;      in the file, so store the end of the buffer
+      ; when we're done, we can narrow to the region we've identified
+
+      ;(widen)
+      (while (>= (org-outline-level) (org-journal--time-entry-level))
+        (org-up-heading-safe))
+      (setq goal-date (djb-display-date-from-entry-date)) ; that was #1!
+      ;(message (concat "looking for date: " goal-date))
+
+      (setq djb-start-point nil)
+      (setq djb-cur-buf (buffer-name))
+      (save-excursion
+        (setq this-date goal-date)
+        (while (and (equal this-date goal-date) (equal djb-cur-buf (buffer-name)))
+          (if (equal djb-start-point (pos-bol))
+              (setq this-date nil) ; we are in a loop (at the very very first entry). hack to break the loop.
+            (progn
+              (setq djb-start-point (pos-bol))
+              (org-journal--next-entry t) ; back one. caution! can't call _this_ function from inside that one, then!
+              (setq this-date (djb-display-date-from-entry-date)))))) ; that was #2!
+
+      (setq this-date goal-date)
+      (setq djb-end-point nil)
+      (setq djb-continue 't)
+      ; every time we move forward an entry, one of 4 things can happen
+      ; - 1) we didn't move at all, because we're at the very very last entry. Use end-of-buffer.
+      ; - 2) we moved to a different file. Go back to the previous one and use end-of-buffer.
+      ; - 3) we moved and are in a different display-date unit. Use 1 less than beginning-of-line (start of next entry).
+      ; - 4) we moved and are in the same display-date unit. Go forward again!
+      (while (not djb-end-point)
+        (setq djb-latest-pointer (pos-bol))
+        (org-journal--next-entry)
+        (if (equal djb-latest-pointer (pos-bol))
+            (setq djb-end-point (1+ (buffer-size))) ; #1
+          (if (not (equal djb-cur-buf (buffer-name)))
+              (progn
+                (switch-to-buffer djb-cur-buf)
+                (setq djb-end-point (1+ (buffer-size)))) ; #2
+            (unless (equal goal-date (djb-display-date-from-entry-date)) ; #4
+              (setq djb-end-point (1- (pos-bol))))))) ;#3
+      )) ; return to saved restriction/excursion
+
+  (outline-hide-sublevels (max 1 (org-journal--time-entry-level))) ; REVISIT: only sometimes?
+  (narrow-to-region djb-start-point djb-end-point)
+  ))
+
