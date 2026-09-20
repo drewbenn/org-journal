@@ -2156,7 +2156,8 @@ enabling encryption by default."
                 (setq display-end-point (1- (pos-bol))))))) ;#3
         )) ; return to saved restriction/excursion
 
-    (outline-hide-sublevels (max 1 (org-journal--time-entry-level))) ; REVISIT DJB: only sometimes? What variable does this depend on?
+    (when (and org-journal-hide-entries-p (org-journal--time-entry-level))
+      (outline-hide-sublevels (org-journal--time-entry-level))) ;REVISIT: but see #463
     (narrow-to-region display-start-point display-end-point)))
 
   
