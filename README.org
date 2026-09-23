@@ -200,13 +200,16 @@ Customization options related to journal directory and files:
   (not enabled, (default), 'weekly or 'monthly. When enabled, the
   display is narrowed to this view so you can, for example, view only
   a week at a time while storing all the entries for a year in a
-  single file.
+  single file. If you are in this mode and want to see the full file,
+  use `C-x n w` or `M-x widen`.
 
-  Known issues:
+  If you set this to 'weekly, weeks that split across your file-type
+  'monthly or 'yearly boundary will only be visible as separate weeks:
+  this won't build a combined view from 2 different files.
 
-  - (weeks that cross years/months)
-
-  - org-journal-file-header affects file type, not display type.
+  There is no display-type analogue for =org-journal-file-header=, so
+  you can't insert something when you create a new journal entry in a
+  new display type.
 
 *** Journal File Content
 
@@ -481,7 +484,6 @@ When working in an org-mode buffer the following org-journal key bindings are ov
 - =C-c C-f= (=org-journal-open-next-entry=) with =org-forward-heading-same-level=
 - =C-c C-b= (=org-journal-open-previous-entry=) with =org-backward-heading-same-level=
 - =C-c C-j= (=org-journal-new-entry=) with =org-goto=
-- REVISIT: What about C-c C-S-[fb]?
 
 To workaround this, you can use user bindings of the form =C-c ?=, where =?= can be any letter, to call the org-journal functions. This allows you to have a set of keybindings that work the same in org-mode and org-journal buffers. However, this is Emacs, and if you don't like a key binding, change it!
 
