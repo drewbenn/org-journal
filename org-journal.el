@@ -558,10 +558,11 @@ before it will be deposed."
 
 (defun org-journal-after-save-hook ()
   "Update agenda files and dates."
-  (save-restriction (widen)
-  (org-journal--update-org-agenda-files)
-  (org-journal--dates-puthash)
-  (org-journal--serialize)))
+  (save-restriction
+    (widen)
+    (org-journal--update-org-agenda-files)
+    (org-journal--dates-puthash)
+    (org-journal--serialize)))
 
 (defun org-journal-is-journal ()
   "Determine if file is a journal file."
@@ -1914,29 +1915,30 @@ If STR is empty, search for all entries using `org-journal-time-prefix'."
     (dolist (fname (reverse files))
       (setq result (org-journal--with-journal
                        fname
-                     (save-restriction (widen)
-                     (when org-journal-enable-encryption
+                     (save-restriction
+                       (widen)
+                       (when org-journal-enable-encryption
+                         (goto-char (point-min))
+                         (while (search-forward ":crypt:" nil t)
+                           (org-decrypt-entry)))
                        (goto-char (point-min))
-                       (while (search-forward ":crypt:" nil t)
-                         (org-decrypt-entry)))
-                     (goto-char (point-min))
-                     (while (funcall org-journal-search-forward-fn str nil t)
-                       (push
-                        (list
-                         (let ((date
-                                (if (org-journal--daily-p)
-                                    (org-journal--file-name->calendar-date fname)
-                                  (save-excursion
-                                    (when (re-search-backward org-journal--created-re nil t)
-                                      (when (= (save-excursion (org-back-to-heading) (org-outline-level)) 1)
-                                        (org-journal--entry-date->calendar-date)))))))
-                           (when date
-                             (org-journal--calendar-date->time date)))
-                         (- (point) (length str))
-                         (buffer-substring-no-properties
-                          (line-beginning-position)
-                          (line-end-position)))
-                        result)))
+                       (while (funcall org-journal-search-forward-fn str nil t)
+                         (push
+                          (list
+                           (let ((date
+                                  (if (org-journal--daily-p)
+                                      (org-journal--file-name->calendar-date fname)
+                                    (save-excursion
+                                      (when (re-search-backward org-journal--created-re nil t)
+                                        (when (= (save-excursion (org-back-to-heading) (org-outline-level)) 1)
+                                          (org-journal--entry-date->calendar-date)))))))
+                             (when date
+                               (org-journal--calendar-date->time date)))
+                           (- (point) (length str))
+                           (buffer-substring-no-properties
+                            (line-beginning-position)
+                            (line-end-position)))
+                          result)))
                      result))
       (when result
         (mapc (lambda (res) (push res results)) result)))
@@ -2126,7 +2128,8 @@ enabling encryption by default."
               (if (equal display-start-point (pos-bol)) ;; we are at the very very first entry
                   (setq display-cur-buf nil)            ;; hack to break out of the loop
                 (setq display-start-point (pos-bol))
-                (org-journal--next-entry t)))) ;; #2
+                (org-journal--next-entry t))))
+          ;; that was #2
 
           ;; #3: every time we move forward an entry, one of 4 things can happen
           ;; - A) we didn't move at all, because we're at the very very last entry. Use end-of-buffer.
@@ -2150,7 +2153,7 @@ enabling encryption by default."
       (when (and org-journal-hide-entries-p (org-journal--time-entry-level))
         (outline-hide-sublevels (org-journal--time-entry-level))) ; REVISIT: but see #463
       (narrow-to-region display-start-point display-end-point))))
-
+; REVISIT: something doesn't work right when creating entries in the future
   
 (provide 'org-journal)
 
