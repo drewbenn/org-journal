@@ -1159,6 +1159,7 @@ Extracted from org-roam (org-roam-end-of-meta-data)."
       file
     (let (dates)
       (save-excursion
+        (widen)
         (goto-char (point-min))
         (org-journal--skip-meta-data)
         (while (re-search-forward org-journal--created-re nil t)
@@ -1580,18 +1581,16 @@ If prev is non-nil open previous entry instead of next."
 
 If prev is non-nil open previous display instead of next.
 
-Moves one entry at a time until either we stop moving (we have reached the very first or very last entry) or we have entered a new display period."
-
-  ; REVISIT: bug: jumps 2 weeks when leaving a week that is split across a year boundary.
-  
-  (setq date-to-leave (org-journal--display-date-from-entry-date))
-  (setq this-date date-to-leave)
-  (setq prev-pointer '0)
-  (while (and (/= prev-pointer (pos-bol)) (equal this-date date-to-leave))
-    (setq prev-pointer (pos-bol))
-    (org-journal--next-entry prev)
-    (setq this-date (org-journal--display-date-from-entry-date))
-    ))
+Moves one entry at a time until either we stop moving (we have reached the very first or very last entry), we have entered a new display period (yay! we are now where we want to be) or we have reached a new buffer (probably because a week is split across a month or year boundary)."
+  (when org-journal-display-type
+    (let ((prev-pointer (1- (pos-bol)))
+          (date-to-leave (org-journal--display-date-from-entry-date))
+          (start-buf (buffer-name)))
+      (while (and (/= prev-pointer (pos-bol))
+                  (equal date-to-leave (org-journal--display-date-from-entry-date))
+                  (equal start-buf (buffer-name)))
+        (setq prev-pointer (pos-bol))
+        (org-journal--next-entry prev)))))
 
 ;;;###autoload
 (defun org-journal-next-display-type ()
@@ -2101,42 +2100,40 @@ enabling encryption by default."
   "Implements display type, configured by the variable org-journal-display-type. Narrows the current buffer to the display-type period so e.g. you can display just one week at a time while storing an entire year at a time."
   (interactive)
   (when org-journal-display-type
-    (let (display-start-point display-end-point (display-cur-buf (buffer-name)))
-      (save-excursion      ; we're going to move around a lot while trying to
-        (save-restriction  ; find the beginning and end of this display period
-          ; okay we're going to do 3 things
-          ; 1) get the 'goal date' based on the display mode
-          ; 2) move backwards for as long as we keep matching that date
-          ;    - and store that point
-          ;    - if we encounter a problem, just stop: we have already stored the correct point
-          ; 3) move forwards until we stop matching that date
-          ;    - and store that point
-          ;    - if we failed to move forward, this is the last entry
-          ;      in the file, so store the end of the buffer
-          ; when we're done, we can narrow to the region we've identified
+    (let (display-start-point display-end-point goal-date (display-cur-buf (buffer-name)))
+      (save-excursion      ;; we're going to move around a lot while trying to find
+        (save-restriction  ;; ...the beginning and end of this display period
+          ;; okay we're going to do 3 things
+          ;; 1) get the 'goal date' based on the display mode
+          ;; 2) move backwards for as long as we keep matching that date
+          ;;    - and store that point
+          ;;    - if we encounter a problem, just stop: we have already stored the correct point
+          ;; 3) move forwards until we stop matching that date
+          ;;    - and store that point
+          ;;    - if we failed to move forward, this is the last entry
+          ;;      in the file, so store the end of the buffer
+          ;; when we're done, we can narrow to the region we've identified
 
           (while (>= (org-outline-level) (org-journal--time-entry-level))
             (org-up-heading-safe))
           (setq goal-date (org-journal--display-date-from-entry-date))
-          ; that was #1!
+          ;; that was #1!
 
           (save-excursion
-            (let ((this-date goal-date))
-              (while (and (equal this-date goal-date) (equal display-cur-buf (buffer-name)))
-                (if (equal display-start-point (pos-bol))
-                    (setq this-date nil) ; we are in a loop (at the very very first entry). hack to break the loop.
-                  (progn
-                    (setq display-start-point (pos-bol))
-                    (org-journal--next-entry t) ; move backwards one entry
-                    (setq this-date (org-journal--display-date-from-entry-date)))))))
-          ; that was #2!
+            ;; REVISIT: this is the same as (org-journal--next-display-type): if I could make that return its `prev-pointer' and set `display-start-point' to that, I wouldn't need to rewrite that code here!
+            (while (and (equal goal-date (org-journal--display-date-from-entry-date))
+                        (equal display-cur-buf (buffer-name)))
+              (if (equal display-start-point (pos-bol)) ;; we are at the very very first entry
+                  (setq display-cur-buf nil)            ;; hack to break out of the loop
+                (setq display-start-point (pos-bol))
+                (org-journal--next-entry t)))) ;; #2
 
-          ; #3: every time we move forward an entry, one of 4 things can happen
-          ; - A) we didn't move at all, because we're at the very very last entry. Use end-of-buffer.
-          ; - B) we moved to a different file. Go back to the previous one and use end-of-buffer.
-          ; - C) we moved and are in a different display-date unit: Use 1 less than beginning-of-line
-          ;      (which is the start of the first entry in the next display-date unit).
-          ; - D) we moved and are in the same display-date unit. Go forward again!
+          ;; #3: every time we move forward an entry, one of 4 things can happen
+          ;; - A) we didn't move at all, because we're at the very very last entry. Use end-of-buffer.
+          ;; - B) we moved to a different file. Go back to the previous one and use end-of-buffer.
+          ;; - C) we moved and are in a different display-date unit: Use 1 less than beginning-of-line
+          ;;      (which is the start of the first entry in the next display-date unit).
+          ;; - D) we moved and are in the same display-date unit. Go forward again!
           (while (not display-end-point)
             (let ((display-latest-pointer (pos-bol)))
               (org-journal--next-entry) ; move forward to the next entry
@@ -2147,9 +2144,9 @@ enabling encryption by default."
                       (setq display-end-point (1- (pos-bol)))) ; (C)
                   (switch-to-buffer display-cur-buf)
                   (setq display-end-point (1+ (buffer-size))))))) ; (B)
-          )) ; return to saved restriction/excursion
+          )) ;; return to saved restriction/excursion
 
-      ; from the original view, we can now narrow to this display period
+      ;; from the original view, we can now narrow to this display period
       (when (and org-journal-hide-entries-p (org-journal--time-entry-level))
         (outline-hide-sublevels (org-journal--time-entry-level))) ; REVISIT: but see #463
       (narrow-to-region display-start-point display-end-point))))
