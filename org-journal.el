@@ -145,7 +145,9 @@ From branch \"emacs-26\", added for compatibility.
 (defcustom org-journal-display-type nil
   "What type of journal file to emulate, despite writing a different format.
 
-This lets you, for example, store your journal as a yearly file but only display one week at a time. This value needs to be shorter than org-journal-file-type; if nil, the feature is disabled."
+This lets you, for example, store your journal as a yearly file but only display
+one week at a time. This value needs to be shorter than org-journal-file-type;
+if nil, the feature is disabled."
   :type '(choice
           (const :tag "Disabled" nil)
           (const :tag "Daily" daily)
@@ -499,12 +501,12 @@ The key is a journal date entry, and the value of the key is of the form
 
 ;; Key bindings
 (when (and (stringp org-journal-prefix-key) (not (string-empty-p org-journal-prefix-key)))
-  (let ((command-table '(("f" . org-journal-next-entry)
-                         ("b" . org-journal-previous-entry)
+  (let ((command-table '(("f"   . org-journal-next-entry)
+                         ("b"   . org-journal-previous-entry)
                          ("S-f" . org-journal-next-display-type)
                          ("S-b" . org-journal-previous-display-type)
-                         ("j" . org-journal-new-entry)
-                         ("s" . org-journal-search)))
+                         ("j"   . org-journal-new-entry)
+                         ("s"   . org-journal-search)))
         (key-func (if (string-prefix-p "\\" org-journal-prefix-key)
                       #'concat
                     (lambda (prefix key) (kbd (concat prefix "" key))))))
@@ -1537,7 +1539,7 @@ is nil or avoid switching when NOSELECT is non-nil."
           buf)
       (message "No journal entry for this date."))))
 
-(defun org-journal--next-entry (&optional prev)
+(defun org-journal--next-entry (&optional prev suppress)
   "Go to next entry.
 
 If prev is non-nil open previous entry instead of next."
@@ -1561,7 +1563,8 @@ If prev is non-nil open previous entry instead of next."
              (user-error
               (concat "org-journal-" (if prev "previous" "next")
                       "-entry called outside calendar/org-journal mode"))))
-    (message (concat "No journal entry " (if prev "before" "after") " this one"))))
+    (unless suppress
+      (message (concat "No journal entry " (if prev "before" "after") " this one")))))
 
 ;;;###autoload
 (defun org-journal-next-entry ()
@@ -1582,7 +1585,10 @@ If prev is non-nil open previous entry instead of next."
 
 If prev is non-nil open previous display instead of next.
 
-Moves one entry at a time until either we stop moving (we have reached the very first or very last entry), we have entered a new display period (yay! we are now where we want to be) or we have reached a new buffer (probably because a week is split across a month or year boundary)."
+Moves one entry at a time until either we stop moving (we have reached
+the very first or very last entry), we have entered a new display
+period (which is where we want to be) or we have reached a new buffer
+(probably because a week is split across a month or year boundary)."
   (when org-journal-display-type
     (let ((prev-pointer (1- (pos-bol)))
           (date-to-leave (org-journal--display-date-from-entry-date))
@@ -1591,7 +1597,8 @@ Moves one entry at a time until either we stop moving (we have reached the very 
                   (equal date-to-leave (org-journal--display-date-from-entry-date))
                   (equal start-buf (buffer-name)))
         (setq prev-pointer (pos-bol))
-        (org-journal--next-entry prev)))))
+        (org-journal--next-entry prev t))
+      prev-pointer)))
 
 ;;;###autoload
 (defun org-journal-next-display-type ()
@@ -2089,7 +2096,8 @@ enabling encryption by default."
             nil t))
 
 (defun org-journal--display-date-from-entry-date()
-  "Get the 'display date' of the current entry, e.g. if it is Wednesday in a weekly-display journal starting on Mondays, get Monday's date."
+  "Get the 'display date' of the current entry, e.g. if it is Wednesday
+in a weekly-display journal starting on Mondays, get Monday's date."
   ;(interactive)
   (when org-journal-display-type
     (save-excursion
@@ -2099,21 +2107,22 @@ enabling encryption by default."
         (format-time-string "%Y%m%d" (org-journal--convert-time-to-file-type-time org-journal-display-type (org-journal--calendar-date->time (org-journal--entry-date->calendar-date))))))))
 
 (defun org-journal--narrow-to-display-selection (&optional time)
-  "Implements display type, configured by the variable org-journal-display-type. Narrows the current buffer to the display-type period so e.g. you can display just one week at a time while storing an entire year at a time."
+  "Implements display type, configured by the variable
+`org-journal-display-type'. Narrows the current buffer to the
+display-type period so e.g. you can display just one week at a time
+while storing an entire year at a time."
   (interactive)
   (when org-journal-display-type
-    (let (display-start-point display-end-point goal-date (display-cur-buf (buffer-name)))
-      (save-excursion      ;; we're going to move around a lot while trying to find
-        (save-restriction  ;; ...the beginning and end of this display period
+    (let (display-start-point
+          display-end-point
+          goal-date
+          (display-cur-buf (buffer-name)))
+      (save-excursion
+        (save-restriction
           ;; okay we're going to do 3 things
           ;; 1) get the 'goal date' based on the display mode
-          ;; 2) move backwards for as long as we keep matching that date
-          ;;    - and store that point
-          ;;    - if we encounter a problem, just stop: we have already stored the correct point
-          ;; 3) move forwards until we stop matching that date
-          ;;    - and store that point
-          ;;    - if we failed to move forward, this is the last entry
-          ;;      in the file, so store the end of the buffer
+          ;; 2) move backwards until we no longer match that date
+          ;; 3) move forwards until we no longer match that date
           ;; when we're done, we can narrow to the region we've identified
 
           (while (>= (org-outline-level) (org-journal--time-entry-level))
@@ -2122,14 +2131,13 @@ enabling encryption by default."
           ;; that was #1!
 
           (save-excursion
-            ;; REVISIT: this is the same as (org-journal--next-display-type): if I could make that return its `prev-pointer' and set `display-start-point' to that, I wouldn't need to rewrite that code here!
-            (while (and (equal goal-date (org-journal--display-date-from-entry-date))
+            ;; "like `org-journal--next-display-type'" but gives us
+            ;; the start point of the last entry to match the goal date
+            (while (and (not (equal display-start-point (pos-bol)))
+                        (equal goal-date (org-journal--display-date-from-entry-date))
                         (equal display-cur-buf (buffer-name)))
-              (if (equal display-start-point (pos-bol)) ;; we are at the very very first entry
-                  (setq display-cur-buf nil)            ;; hack to break out of the loop
                 (setq display-start-point (pos-bol))
-                (org-journal--next-entry t))))
-          ;; that was #2
+                (org-journal--next-entry t t))) ;; that was #2
 
           ;; #3: every time we move forward an entry, one of 4 things can happen
           ;; - A) we didn't move at all, because we're at the very very last entry. Use end-of-buffer.
@@ -2139,23 +2147,21 @@ enabling encryption by default."
           ;; - D) we moved and are in the same display-date unit. Go forward again!
           (while (not display-end-point)
             (let ((display-latest-pointer (pos-bol)))
-              (org-journal--next-entry) ; move forward to the next entry
+              (org-journal--next-entry nil t) ; move forward to the next entry
               (if (equal display-latest-pointer (pos-bol))
                   (setq display-end-point (1+ (buffer-size))) ; (A)
                 (if (equal display-cur-buf (buffer-name))
                     (unless (equal goal-date (org-journal--display-date-from-entry-date)) ; (D)
                       (setq display-end-point (1- (pos-bol)))) ; (C)
                   (switch-to-buffer display-cur-buf)
-                  (setq display-end-point (1+ (buffer-size))))))) ; (B)
-          )) ;; return to saved restriction/excursion
+                  (setq display-end-point (1+ (buffer-size))))))))) ; (B)
 
       ;; from the original view, we can now narrow to this display period
       (when (and org-journal-hide-entries-p (org-journal--time-entry-level))
         (outline-hide-sublevels (org-journal--time-entry-level))) ; REVISIT: but see #463
       (narrow-to-region display-start-point display-end-point))))
-; REVISIT: something doesn't work right when creating entries in the future
-  
+;; REVISIT: something doesn't work right when creating entries in the future
+
 (provide 'org-journal)
 
 ;;; org-journal.el ends here
-
