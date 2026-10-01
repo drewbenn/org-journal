@@ -74,8 +74,8 @@
 ;; day. This is customizable through org-journal-carryover-items.
 ;;
 ;; Quick summary:
-;; To create a new journal entry for the current time and day: M-x org-journal-new-entry
-;; To open today's journal without creating a new entry: C-u M-x org-journal-new-entry
+;; To create a new journal entry for the current time and day: M-x org-journal-new-entry (C-c C-j)
+;; To open today's journal without creating a new entry: C-u M-x org-journal-new-entry (C-u C-c C-j)
 ;; In calendar view: j m to mark entries in calendar
 ;;                   j r to view an entry in a new buffer
 ;;                   j d to view an entry but not switch to it
@@ -89,8 +89,6 @@
 ;;                   ] to go to next entry
 ;; When viewing a journal entry: C-c C-b to view previous entry
 ;;                               C-c C-f to view next entry
-;;                               C-c C-j to create a new journal entry
-;;                               C-u C-c C-j to open today's journal without creating a new entry
 
 
 ;;; Code:
@@ -1603,7 +1601,7 @@ period (which is where we want to be) or we have reached a new buffer
         (setq prev-pointer (pos-bol))
         (org-journal--next-entry prev t))
       (when (= prev-pointer (pos-bol))
-        (message (concat "No journal display " (if prev "before" "after") " this one"))))))
+        (message (concat "No journal display unit " (if prev "before" "after") " this one"))))))
 
 ;;;###autoload
 (defun org-journal-next-display-type ()
@@ -2100,10 +2098,10 @@ enabling encryption by default."
             'org-journal-encryption-hook
             nil t))
 
+;; TODO: something doesn't work right when creating entries in the future, maybe only for new files
 (defun org-journal--display-date-from-entry-date()
   "Get the 'display date' of the current entry, e.g. if it is Wednesday
 in a weekly-display journal starting on Mondays, get Monday's date."
-  ;(interactive)
   (when org-journal-display-type
     (save-excursion
       (save-restriction
@@ -2168,7 +2166,6 @@ while storing an entire year at a time."
           (outline-hide-sublevels (org-journal--time-entry-level))
         (save-excursion (org-journal--finalize-view)))
       (narrow-to-region display-start-point display-end-point))))
-;; REVISIT: something doesn't work right when creating entries in the future, maybe only for new files
 
 (provide 'org-journal)
 
