@@ -89,6 +89,8 @@
 ;;                   ] to go to next entry
 ;; When viewing a journal entry: C-c C-b to view previous entry
 ;;                               C-c C-f to view next entry
+;;                               C-c C-j to create a new journal entry
+;;                               C-u C-c C-j to open today's journal without creating a new entry
 
 
 ;;; Code:
@@ -417,7 +419,7 @@ This variable needs to set before `org-journal' gets loaded.
 When this variable is set to an empty string or `nil' no bindings will
 be made.
 
-This prefix key is used for:
+This prefix key is used for:;REVISIT: update this?
 - `org-journal-next-entry' (key \"f\")
 - `org-journal-previous-entry' (key \"b\")
 - `org-journal-new-entry' (key \"j\")
@@ -1598,7 +1600,7 @@ period (which is where we want to be) or we have reached a new buffer
                   (equal start-buf (buffer-name)))
         (setq prev-pointer (pos-bol))
         (org-journal--next-entry prev t))
-      prev-pointer)))
+      prev-pointer))) ;REVISIT this is probably the function where I place the message that we can't move farther
 
 ;;;###autoload
 (defun org-journal-next-display-type ()
@@ -2113,7 +2115,7 @@ display-type period so e.g. you can display just one week at a time
 while storing an entire year at a time."
   (interactive)
   (when org-journal-display-type
-    (let (display-start-point
+    (let ((display-start-point 0)
           display-end-point
           goal-date
           (display-cur-buf (buffer-name)))
@@ -2122,7 +2124,9 @@ while storing an entire year at a time."
           ;; okay we're going to do 3 things
           ;; 1) get the 'goal date' based on the display mode
           ;; 2) move backwards until we no longer match that date
+                - the previous point is the start of our display-type window
           ;; 3) move forwards until we no longer match that date
+                - the current point is the end of our display-type window
           ;; when we're done, we can narrow to the region we've identified
 
           (while (>= (org-outline-level) (org-journal--time-entry-level))
@@ -2133,7 +2137,7 @@ while storing an entire year at a time."
           (save-excursion
             ;; "like `org-journal--next-display-type'" but gives us
             ;; the start point of the last entry to match the goal date
-            (while (and (not (equal display-start-point (pos-bol)))
+            (while (and (/= display-start-point (pos-bol))
                         (equal goal-date (org-journal--display-date-from-entry-date))
                         (equal display-cur-buf (buffer-name)))
                 (setq display-start-point (pos-bol))
@@ -2157,10 +2161,11 @@ while storing an entire year at a time."
                   (setq display-end-point (1+ (buffer-size))))))))) ; (B)
 
       ;; from the original view, we can now narrow to this display period
-      (when (and org-journal-hide-entries-p (org-journal--time-entry-level))
-        (outline-hide-sublevels (org-journal--time-entry-level))) ; REVISIT: but see #463
+      (if (and org-journal-hide-entries-p (org-journal--time-entry-level))
+          (outline-hide-sublevels (org-journal--time-entry-level))
+        (save-excursion (org-journal--finalize-view)))
       (narrow-to-region display-start-point display-end-point))))
-;; REVISIT: something doesn't work right when creating entries in the future
+;; REVISIT: something doesn't work right when creating entries in the future, maybe only for new files
 
 (provide 'org-journal)
 
