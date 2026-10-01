@@ -419,11 +419,13 @@ This variable needs to set before `org-journal' gets loaded.
 When this variable is set to an empty string or `nil' no bindings will
 be made.
 
-This prefix key is used for:;REVISIT: update this?
+This prefix key is used for:
 - `org-journal-next-entry' (key \"f\")
 - `org-journal-previous-entry' (key \"b\")
 - `org-journal-new-entry' (key \"j\")
-- `org-journal-search' (key \"s\")"
+- `org-journal-search' (key \"s\")
+- `org-journal-next-display-type' (key \"S-f\")
+- `org-journal-previous-display-type' (key \"S-b\")"
   :type 'string)
 
 (defcustom org-journal-scheduled-string ""      ; or org-scheduled-string
@@ -1600,7 +1602,8 @@ period (which is where we want to be) or we have reached a new buffer
                   (equal start-buf (buffer-name)))
         (setq prev-pointer (pos-bol))
         (org-journal--next-entry prev t))
-      prev-pointer))) ;REVISIT this is probably the function where I place the message that we can't move farther
+      (when (= prev-pointer (pos-bol))
+        (message (concat "No journal display " (if prev "before" "after") " this one"))))))
 
 ;;;###autoload
 (defun org-journal-next-display-type ()
