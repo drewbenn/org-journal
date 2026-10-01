@@ -2098,7 +2098,6 @@ enabling encryption by default."
             'org-journal-encryption-hook
             nil t))
 
-;; TODO: something doesn't work right when creating entries in the future, maybe only for new files
 (defun org-journal--display-date-from-entry-date()
   "Get the 'display date' of the current entry, e.g. if it is Wednesday
 in a weekly-display journal starting on Mondays, get Monday's date."
@@ -2109,6 +2108,7 @@ in a weekly-display journal starting on Mondays, get Monday's date."
           (org-up-heading-safe))
         (format-time-string "%Y%m%d" (org-journal--convert-time-to-file-type-time org-journal-display-type (org-journal--calendar-date->time (org-journal--entry-date->calendar-date))))))))
 
+;; TODO: something doesn't work right when creating entries in the future, maybe only for new files
 (defun org-journal--narrow-to-display-selection (&optional time)
   "Implements display type, configured by the variable
 `org-journal-display-type'. Narrows the current buffer to the
