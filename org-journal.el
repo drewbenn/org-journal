@@ -2125,9 +2125,9 @@ while storing an entire year at a time."
           ;; okay we're going to do 3 things
           ;; 1) get the 'goal date' based on the display mode
           ;; 2) move backwards until we no longer match that date
-                - the previous point is the start of our display-type window
+          ;;    - the previous point is the start of our display-type window
           ;; 3) move forwards until we no longer match that date
-                - the current point is the end of our display-type window
+          ;;    - the current point is the end of our display-type window
           ;; when we're done, we can narrow to the region we've identified
 
           (while (>= (org-outline-level) (org-journal--time-entry-level))
