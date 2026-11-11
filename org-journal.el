@@ -2024,3 +2024,4 @@ enabling encryption by default."
 (provide 'org-journal)
 
 ;;; org-journal.el ends here
+
