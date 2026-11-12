@@ -121,7 +121,8 @@
   (org-journal-test-macro
    (let ((org-journal-file-header "#+TITLE: Some header\n#+STARTUP: folded"))
      (let ((inhibit-message t))
-       (org-journal-new-entry t))
+       (org-journal-new-entry t)
+       (widen))
      (save-buffer)
      (kill-buffer)
      (should (string= (with-temp-buffer
@@ -148,6 +149,7 @@
        (insert "** TODO Second\n")
        (insert "** 14:00 Some journal entry 2\n")
        (write-file (expand-file-name buffer org-journal-dir-test))
+       (widen)
        (kill-buffer buffer))
      (find-file (expand-file-name buffer org-journal-dir-test))
      (should (not (stringp (org-journal-read-or-display-entry (encode-time 0 0 0 1 1 2019)))))
@@ -194,6 +196,7 @@
           (insert "** TODO b\n")
           (insert "** 14:00 Some journal entry 2\n")
           (write-file (expand-file-name buffer org-journal-dir-test))
+          (widen)
           (kill-buffer buffer))
         (org-journal-new-entry nil)
         (save-buffer)
@@ -218,6 +221,7 @@
           (insert "* Wednesday, 01/02/19\n")
           (insert "** TODO a\n")
           (write-file (expand-file-name buffer org-journal-dir-test))
+          (widen)
           (kill-buffer buffer))
         (org-journal-new-entry nil)
         (save-buffer)
@@ -237,9 +241,11 @@
           (org-set-property "CREATED" "20190102")
           (insert "** TODO a\n")
           (write-file (expand-file-name "20190101" org-journal-dir-test))
+          (widen)
           (kill-buffer "20190101"))
 
         (org-journal-new-entry nil)
+        (widen)
         (save-buffer)
         (kill-buffer)
         (should (equal "No journal entry for this date."
