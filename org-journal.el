@@ -1,4 +1,4 @@
-;;; org-journal.el --- a simple org-mode based journaling mode -*- lexical-binding: t; -*-
+;;; org-journal.el --- A simple org-mode based journaling mode -*- lexical-binding: t; -*-
 
 ;; Copyright 2013-2024 Bastian Bechtold
 
