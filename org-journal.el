@@ -546,11 +546,9 @@ before it will be deposed."
 
 (defun org-journal-after-save-hook ()
   "Update agenda files and dates."
-  (save-restriction
-    (widen)
-    (org-journal--update-org-agenda-files)
-    (org-journal--dates-puthash)
-    (org-journal--serialize)))
+  (org-journal--update-org-agenda-files)
+  (org-journal--dates-puthash)
+  (org-journal--serialize))
 
 (defun org-journal-is-journal ()
   "Determine if file is a journal file."
