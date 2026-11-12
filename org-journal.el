@@ -1139,7 +1139,6 @@ Extracted from org-roam (org-roam-end-of-meta-data)."
       file
     (let (dates)
       (save-excursion
-        (widen)
         (goto-char (point-min))
         (org-journal--skip-meta-data)
         (while (re-search-forward org-journal--created-re nil t)
@@ -1480,7 +1479,6 @@ is nil or avoid switching when NOSELECT is non-nil."
                  ;; Search for journal entry
                  (with-current-buffer buf
                    (save-mark-and-excursion
-                     (widen)
                      (goto-char (point-min))
                      (setq time (decode-time time))
                      (setq point (org-journal--search-forward-created
