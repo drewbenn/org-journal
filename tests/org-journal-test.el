@@ -299,6 +299,7 @@
          (directory-file-name "tests/journals/yearly/carryover1")
          (file-name-as-directory org-journal-dir-test) nil nil t)
         (org-journal-new-entry 4) ;; 4 - no new time entry
+        (widen) ;; TODO: widen testing
         (setq new-scheduled-date (with-temp-buffer
                                    (org-insert-time-stamp (current-time))
                                    (org-journal-buffer-content t t)))

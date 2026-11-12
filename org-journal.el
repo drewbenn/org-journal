@@ -1139,13 +1139,12 @@ Extracted from org-roam (org-roam-end-of-meta-data)."
       file
     (let (dates)
       (save-excursion
-        (save-restriction (widen);TODO:breaks CI on Windows for some reason;(widen)
+        ;(widen);TODO:breaks CI on Windows for some reason;(widen)
         (goto-char (point-min))
         (org-journal--skip-meta-data)
         (while (re-search-forward org-journal--created-re nil t)
           (when (= (save-excursion (org-back-to-heading) (org-outline-level)) 1)
             (push (org-journal--entry-date->calendar-date) dates)))
-        );TODO: widen testing;
         dates))))
 
 ;;;###autoload
