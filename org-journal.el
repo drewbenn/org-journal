@@ -546,9 +546,11 @@ before it will be deposed."
 
 (defun org-journal-after-save-hook ()
   "Update agenda files and dates."
-  (org-journal--update-org-agenda-files)
-  (org-journal--dates-puthash)
-  (org-journal--serialize))
+  (save-restriction
+    ;TODO:breaks CI on Windows for some reason;(widen)
+    (org-journal--update-org-agenda-files)
+    (org-journal--dates-puthash)
+    (org-journal--serialize)))
 
 (defun org-journal-is-journal ()
   "Determine if file is a journal file."
@@ -1137,7 +1139,7 @@ Extracted from org-roam (org-roam-end-of-meta-data)."
       file
     (let (dates)
       (save-excursion
-        ;TEST:remove 2.;(widen)
+        ;TODO:breaks CI on Windows for some reason;(widen)
         (goto-char (point-min))
         (org-journal--skip-meta-data)
         (while (re-search-forward org-journal--created-re nil t)
