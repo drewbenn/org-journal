@@ -188,7 +188,8 @@ TODO: deleting this test allows widen+yearly to pass"
         (save-buffer)
         (kill-buffer)
         (should (equal "No journal entry for this date."
-                       (org-journal-read-or-display-entry (encode-time 0 0 0 2 1 2019) 'noselect))))))
+                       (org-journal-read-or-display-entry (encode-time 0 0 0 2 1 2019) 'noselect)))
+        (kill-buffer "20190101"))))
 
 (ert-deftest org-journal-scheduled-carryover-yearly-test ()
   (org-journal-test-macro
