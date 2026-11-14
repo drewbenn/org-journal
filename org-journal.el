@@ -1140,7 +1140,9 @@ Extracted from org-roam (org-roam-end-of-meta-data)."
       file
     (let (dates)
       (save-excursion
+        (message "YYY: point-max: %s" (point-max))
         (widen);TODO:breaks CI on Windows for some reason;(widen)
+        (message "YYY: ---- then: %s" (point-max))
         (goto-char (point-min))
         (org-journal--skip-meta-data)
         (while (re-search-forward org-journal--created-re nil t)
