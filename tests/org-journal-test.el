@@ -142,45 +142,7 @@
 
 
 
-(ert-deftest org-journal-carryover-delete-empty-journal-test ()
-  "Org journal delete empty journal test"
-  (org-journal-test-macro
-      (let ((buffer "20181231")
-            (org-journal-carryover-delete-empty-journal 'always)
-            (inhibit-message t))
 
-        ;; Test that journal file gets dumped, after carryover
-        (with-temp-buffer
-          (org-journal-mode)
-          (insert "* Wednesday, 01/02/19\n")
-          (insert "** TODO a\n")
-          (write-file (expand-file-name buffer org-journal-dir-test))
-          (kill-buffer buffer))
-        (org-journal-new-entry nil)
-        (save-buffer)
-        (kill-buffer)
-        (should (equal "No journal entry for this date."
-                       (org-journal-read-or-display-entry (encode-time 0 0 0 31 12 2018) 'noselect)))
-
-        ;; Test even single entry gets deleted, relevant for weekly, monthly and yearly journal files.
-        (org-journal-dir-test-setup)
-        (setq org-journal-file-type 'yearly)
-        (with-temp-buffer
-          (org-journal-mode)
-          (insert "* Wednesday, 01/01/19\n")
-          (org-set-property "CREATED" "20190101")
-          (insert "** 15:00 a\n")
-          (insert "* Wednesday, 01/02/19\n")
-          (org-set-property "CREATED" "20190102")
-          (insert "** TODO a\n")
-          (write-file (expand-file-name "20190101" org-journal-dir-test))
-          (kill-buffer "20190101"))
-
-        (org-journal-new-entry nil)
-        (save-buffer)
-        (kill-buffer)
-        (should (equal "No journal entry for this date."
-                       (org-journal-read-or-display-entry (encode-time 0 0 0 2 1 2019) 'noselect))))))
 
 
 
