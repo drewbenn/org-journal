@@ -547,7 +547,7 @@ before it will be deposed."
 (defun org-journal-after-save-hook ()
   "Update agenda files and dates."
   (save-restriction
-    (widen);TODO:breaks CI on Windows for some reason;(widen)
+    ;(widen);TODO:breaks CI on Windows for some reason;(widen)
     (org-journal--update-org-agenda-files)
     (org-journal--dates-puthash)
     (org-journal--serialize)))
