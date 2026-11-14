@@ -956,7 +956,7 @@ to process the carryover entries in `prev-buffer'."
         (progn
           (while (org-up-heading-safe))
           (org-end-of-subtree)
-          (forward-char 1))
+          (or (eobp) (forward-char 1)))
       (goto-char (point-max)))
 
     ;; Insure `view-mode' is not active
