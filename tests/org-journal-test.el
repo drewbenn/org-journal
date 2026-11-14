@@ -88,8 +88,8 @@
      (org-journal-dir-test-setup)
      (message "files before starting: %s" (directory-files org-journal-dir-test))
      (message "buffers before starting: %s" (buffer-list))
-     (kill-matching-buffers-no-ask "^[^*]")
-     (message "buffers before starting: %s" (buffer-list))
+     ;;(kill-matching-buffers-no-ask "^[^*]")
+     ;;(message "buffers before starting: %s" (buffer-list))
      ,@body
      (message "buffers left behind: %s" (buffer-list))
      (dolist (buf (buffer-list))
