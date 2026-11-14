@@ -963,6 +963,9 @@ to process the carryover entries in `prev-buffer'."
     (view-mode -1)
 
     (message "bufsz 2b1C: %s" (buffer-size))
+
+    (message "current-column is %d" (current-column))
+    
     (unless (eq (current-column) 0) (message "extra insert") (insert "\n"))
 
     (message "bufsz 2b1D: %s" (buffer-size))
