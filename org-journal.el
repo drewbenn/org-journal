@@ -863,7 +863,7 @@ hook is run."
       (org-journal--carryover))
 
     (if (org-journal--is-date-prefix-org-heading-p)
-        (outline-end-of-subtree)
+        (progn (outline-end-of-subtree) (or (bolp) (eobp) (forward-char 1)))
       (goto-char (point-max)))
 
     (when should-add-entry-p
@@ -935,7 +935,10 @@ items, and delete or not delete the empty entry/file based on
             (org-journal--list-dates))
         (save-excursion
           (org-journal--open-entry t t)
-          (delete-region (point) (progn (outline-end-of-subtree) (point)))
+          (delete-region (point) (progn
+                                   (outline-end-of-subtree)
+                                   (or (bolp) (eobp) (forward-char 1))
+                                   (point)))
           (save-buffer))))))
 
 (defun org-journal-delete-old-carryover (old_entries)
@@ -958,7 +961,9 @@ to process the carryover entries in `prev-buffer'."
     (if (org-journal--is-date-prefix-org-heading-p)
         (progn
           (while (org-up-heading-safe))
-          (outline-end-of-subtree))
+          (outline-end-of-subtree)
+          ;TODO:TEST;(or (bolp) (eobp) (forward-char 1))
+          )
       (goto-char (point-max)))
 
     ;; Insure `view-mode' is not active
@@ -993,6 +998,7 @@ to process the carryover entries in `prev-buffer'."
              nil nil nil 1)))))
 
     (outline-end-of-subtree)
+    (or (bolp) (eobp) (forward-char 1))
 
     ;; Process carryover entries in the previous day's journal
     (with-current-buffer prev-buffer
@@ -1063,7 +1069,10 @@ previous day's file to the current file."
               text (buffer-substring-no-properties start end))
         (push (cons start (cons end text)) carryover-item-with-parents)))
     (setq start (line-beginning-position)
-          end (progn (outline-end-of-subtree) (outline-next-heading) (point))
+          end (progn (outline-end-of-subtree)
+                     (or (bolp) (eobp) (forward-char 1))
+                     (outline-next-heading)
+                     (point))
           text (buffer-substring-no-properties start end))
     (setq carryover-item-with-parents (append carryover-item-with-parents (list (cons start (cons end text)))))))
 
