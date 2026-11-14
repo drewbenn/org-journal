@@ -546,9 +546,11 @@ before it will be deposed."
 
 (defun org-journal-after-save-hook ()
   "Update agenda files and dates."
-  (org-journal--update-org-agenda-files)
-  (org-journal--dates-puthash)
-  (org-journal--serialize))
+  (save-restriction
+    ;(widen);TODO:breaks CI on Windows for some reason;(widen)
+    (org-journal--update-org-agenda-files)
+    (org-journal--dates-puthash)
+    (org-journal--serialize)))
 
 (defun org-journal-is-journal ()
   "Determine if file is a journal file."
@@ -849,6 +851,7 @@ hook is run."
     ;; Insure `view-mode' is not active
     (view-mode -1)
 
+    (widen)
     (org-journal--insert-header time)
     (org-journal--insert-entry-header time)
     (org-journal--decrypt)
@@ -860,7 +863,7 @@ hook is run."
       (org-journal--carryover))
 
     (if (org-journal--is-date-prefix-org-heading-p)
-        (outline-end-of-subtree)
+        (progn (outline-end-of-subtree) (or (bolp) (eobp) (forward-char 1)))
       (goto-char (point-max)))
 
     (when should-add-entry-p
@@ -932,7 +935,10 @@ items, and delete or not delete the empty entry/file based on
             (org-journal--list-dates))
         (save-excursion
           (org-journal--open-entry t t)
-          (delete-region (point) (progn (outline-end-of-subtree) (point)))
+          (delete-region (point) (progn
+                                   (outline-end-of-subtree)
+                                   (or (bolp) (eobp) (forward-char 1))
+                                   (point)))
           (save-buffer))))))
 
 (defun org-journal-delete-old-carryover (old_entries)
@@ -955,7 +961,9 @@ to process the carryover entries in `prev-buffer'."
     (if (org-journal--is-date-prefix-org-heading-p)
         (progn
           (while (org-up-heading-safe))
-          (outline-end-of-subtree))
+          (outline-end-of-subtree)
+          ;TODO:TEST;(or (bolp) (eobp) (forward-char 1))
+          )
       (goto-char (point-max)))
 
     ;; Insure `view-mode' is not active
@@ -990,6 +998,7 @@ to process the carryover entries in `prev-buffer'."
              nil nil nil 1)))))
 
     (outline-end-of-subtree)
+    (or (bolp) (eobp) (forward-char 1))
 
     ;; Process carryover entries in the previous day's journal
     (with-current-buffer prev-buffer
@@ -1060,7 +1069,10 @@ previous day's file to the current file."
               text (buffer-substring-no-properties start end))
         (push (cons start (cons end text)) carryover-item-with-parents)))
     (setq start (line-beginning-position)
-          end (progn (outline-end-of-subtree) (outline-next-heading) (point))
+          end (progn (outline-end-of-subtree)
+                     (or (bolp) (eobp) (forward-char 1))
+                     (outline-next-heading)
+                     (point))
           text (buffer-substring-no-properties start end))
     (setq carryover-item-with-parents (append carryover-item-with-parents (list (cons start (cons end text)))))))
 
@@ -1105,16 +1117,20 @@ Month and Day capture group default to 1."
 
     (list month day year)))
 
-(defun org-journal--entry-date->calendar-date ()
+(defun org-journal--entry-date->calendar-date (&optional inherit)
   "Return journal calendar-date from current buffer.
+
+If INHERIT is t you won't need to
+`(save-excursion (org-up-heading-safe))` first.
 
 This is the counterpart of `org-journal--file-name->calendar-date' for
 `weekly', `monthly' and `yearly' journal files."
   (let ((re (org-journal--format->regex org-journal-created-property-timestamp-format))
         date)
-    (setq date (org-entry-get (point) "CREATED"))
+    (setq date (org-entry-get (point) "CREATED" inherit))
+    (message "ZZZ: in buffer %s at %s" (current-buffer) (buffer-file-name))
     (unless (ignore-errors (string-match re date))
-      (user-error "Created property timestamp format \"%s\" doesn't match CREATED property value (%s) from entry at line: %s" org-journal-created-property-timestamp-format date (what-line)))
+      (user-error "Created property timestamp format \"%s\" doesn't match CREATED property value (%s) from entry at line: %s in %s" org-journal-created-property-timestamp-format date (what-line) (current-buffer)))
     (list (string-to-number (match-string 2 date))    ;; Month
           (string-to-number (match-string 3 date))    ;; Day
           (string-to-number (match-string 1 date))))) ;; Year
@@ -1133,6 +1149,9 @@ Extracted from org-roam (org-roam-end-of-meta-data)."
       file
     (let (dates)
       (save-excursion
+        (message "YYY: point-max: %s" (point-max))
+        (widen);TODO:breaks CI on Windows for some reason;(widen)
+        (message "YYY: ---- then: %s" (point-max))
         (goto-char (point-min))
         (org-journal--skip-meta-data)
         (while (re-search-forward org-journal--created-re nil t)
@@ -1473,6 +1492,7 @@ is nil or avoid switching when NOSELECT is non-nil."
                  ;; Search for journal entry
                  (with-current-buffer buf
                    (save-mark-and-excursion
+                     (widen)
                      (goto-char (point-min))
                      (setq time (decode-time time))
                      (setq point (org-journal--search-forward-created
