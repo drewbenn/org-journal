@@ -950,6 +950,7 @@ If the parent heading has no more content, delete it as well."
 
 Will insert `entries', and run `org-journal-handle-old-carryover' function
 to process the carryover entries in `prev-buffer'."
+  (message "bufsz 2b1A: %s" (buffer-size))
   (when entries
     (if (org-journal--is-date-prefix-org-heading-p)
         (progn
@@ -957,13 +958,17 @@ to process the carryover entries in `prev-buffer'."
           (outline-end-of-subtree))
       (goto-char (point-max)))
 
+    (message "bufsz 2b1B: %s" (buffer-size))
     ;; Insure `view-mode' is not active
     (view-mode -1)
 
-    (unless (eq (current-column) 0) (insert "\n"))
+    (message "bufsz 2b1C: %s" (buffer-size))
+    (unless (eq (current-column) 0) (message "extra insert") (insert "\n"))
 
+    (message "bufsz 2b1D: %s" (buffer-size))
     (insert text)
 
+    (message "bufsz 2b1E: %s" (buffer-size))
     (save-excursion
       (if (org-journal--daily-p)
           (goto-char (point-min))
@@ -988,8 +993,10 @@ to process the carryover entries in `prev-buffer'."
                                         (org-journal--entry-date->calendar-date))))))
              nil nil nil 1)))))
 
+    (message "bufsz 2b1F: %s" (buffer-size))
     (outline-end-of-subtree)
 
+    (message "bufsz 2b1G: %s" (buffer-size))
     ;; Process carryover entries in the previous day's journal
     (with-current-buffer prev-buffer
       (funcall org-journal-handle-old-carryover entries))))
@@ -1040,7 +1047,10 @@ previous day's file to the current file."
                            (setcdr (last cleared-carryover-paths) cleared-paths)
                          (setq cleared-carryover-paths cleared-paths))
                  (setq prev-paths paths)))
-        (org-journal-carryover-items text cleared-carryover-paths prev-buffer))
+        (message "bufsz 2b1: %s" (buffer-size))
+        (org-journal-carryover-items text cleared-carryover-paths prev-buffer)
+        (message "bufsz 2b2: %s" (buffer-size))
+        )
       (org-journal--carryover-delete-empty-journal prev-buffer))
 
     (message "bufsz 2c: %s" (buffer-size))
