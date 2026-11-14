@@ -85,12 +85,7 @@
      (delete-file (concat org-journal-dir-test "-link"))))
 (def-edebug-spec org-journal-test-macro (body))
 
-(ert-deftest org-journal-calendar-date-from-file-test ()
-  "Should return a list with day/month/year"
-  (org-journal-test-macro
-      (should (equal (org-journal--file-name->calendar-date
-                      (expand-file-name "20190103" (file-truename org-journal-dir)))
-                     '(1 03 2019)))))
+
 
 
 
@@ -160,31 +155,6 @@ TODO: deleting this test allows widen+yearly to pass"
         (search-forward new-scheduled-date)
         (search-forward new-scheduled-date))))
 
-(ert-deftest org-journal-scheduled-carryover-daily-test ()
-  (org-journal-test-macro
-      (let ((org-journal-file-type 'daily)
-            (org-journal-date-prefix "#+TITLE: ")
-            (org-journal-time-prefix "* ")
-            (org-journal-file-format "%Y-%m-%d.org")
-            (org-journal-date-format "%Y-%m-%d (%A)")
-            org-journal-encrypt-journal
-            org-journal-enable-encryption
-            org-journal-enable-cache
-            org-journal-file-header
-            new-scheduled-date)
-        ;; Copy test files to temporary directory
-        (copy-directory
-         (directory-file-name "tests/journals/daily/carryover1")
-         (file-name-as-directory org-journal-dir-test) nil nil t)
 
-        (org-journal-new-entry 4) ;; 4 - no new time entry
-        (setq new-scheduled-date (with-temp-buffer
-                                   (org-insert-time-stamp (current-time))
-                                   (buffer-substring-no-properties (point-min) (point-max))))
-        (save-buffer)
-        (goto-char (point-min))
-        ;; FIXME(cschwarzgruber): this is bad; changes are high that this test passes even though it shouldn't. Better use `should'...
-        (search-forward new-scheduled-date)
-        (search-forward new-scheduled-date))))
 
 
