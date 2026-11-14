@@ -92,8 +92,8 @@
      ;;(message "buffers before starting: %s" (buffer-list))
      ,@body
      (message "buffers left behind: %s" (buffer-list))
-     (dolist (buf (buffer-list))
-       (kill-buffer buf))
+     ;;(dolist (buf (buffer-list))
+     ;;  (kill-buffer buf))
      (message "files left behind: %s" (directory-files org-journal-dir-test))
      (delete-directory org-journal-dir-test t)
      (delete-file (concat org-journal-dir-test "-link"))))
