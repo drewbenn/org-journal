@@ -44,7 +44,7 @@
     (delete-directory org-journal-dir-test t))
   ;; Kill leftover buffers from previous failed test
   (dolist (buffer (buffer-list))
-    (when (and (buffer-file-name buffer) (string-match org-journal-dir-test (buffer-file-name buffer)))
+    (when (and (buffer-file-name buffer) (string-match (file-truename org-journal-dir-test) (buffer-file-name buffer)))
       (with-current-buffer buffer
         (set-buffer-modified-p nil)
         (kill-buffer buffer))))
@@ -243,8 +243,7 @@
         (save-buffer)
         (kill-buffer)
         (should (equal "No journal entry for this date."
-                       (org-journal-read-or-display-entry (encode-time 0 0 0 2 1 2019) 'noselect)))
-        (kill-buffer "20190101"))))
+                       (org-journal-read-or-display-entry (encode-time 0 0 0 2 1 2019) 'noselect))))))
 
 (ert-deftest org-journal-search-build-file-list-test ()
   "Test for `org-journal--search-build-file-list'."
@@ -305,8 +304,7 @@
                                    (org-journal-buffer-content t t)))
         (goto-char (point-min))
         (search-forward new-scheduled-date)
-        (search-forward new-scheduled-date)
-        (kill-buffer))))
+        (search-forward new-scheduled-date))))
 
 (ert-deftest org-journal-scheduled-carryover-daily-test ()
   (org-journal-test-macro
