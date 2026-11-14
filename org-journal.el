@@ -860,7 +860,9 @@ hook is run."
       (org-journal--carryover))
 
     (if (org-journal--is-date-prefix-org-heading-p)
-        (outline-end-of-subtree)
+        (progn
+          (outline-end-of-subtree)
+          (or (bolp) (eobp) (forward-char 1)))
       (goto-char (point-max)))
 
     (when should-add-entry-p
