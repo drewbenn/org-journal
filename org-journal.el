@@ -954,8 +954,10 @@ to process the carryover entries in `prev-buffer'."
   (when entries
     (if (org-journal--is-date-prefix-org-heading-p)
         (progn
+          (message "2b1A -- 1")
           (while (org-up-heading-safe))
           (outline-end-of-subtree))
+      (message "2b1A -- 2")
       (goto-char (point-max)))
 
     (message "bufsz 2b1B: %s" (buffer-size))
@@ -964,7 +966,7 @@ to process the carryover entries in `prev-buffer'."
 
     (message "bufsz 2b1C: %s" (buffer-size))
 
-    (message "current-column is %d" (current-column))
+    (message "current-column is %d, point is %d, point-max is %d" (current-column) (point) (point-max))
     
     (unless (eq (current-column) 0) (message "extra insert") (insert "\n"))
 
