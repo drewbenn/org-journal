@@ -2,7 +2,7 @@
 
 (package "org-journal"
          "2.2.0"
-         "A simple org-mode based journaling mode")
+         "a simple org-mode based journaling mode")
 
 (website-url "http://github.com/bastibe/org-journal")
 
