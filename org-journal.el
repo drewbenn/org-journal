@@ -175,21 +175,16 @@ currently to be done manually by calling `org-journal-invalidate-cache'."
 (defcustom org-journal-file-format "%Y%m%d"
   "Format string for journal file names (Default \"YYYYMMDD\").
 
-This pattern MUST include enough format specifiers to uniquely identify
-the filename for the date and file type:
-  | org-journal-file-type | pattern MUST include | or MUST include |
-  |-----------------------+----------------------+-----------------|
-  | daily                 | %Y AND %m AND %d     |                 |
-  | weekly                | %Y AND %m AND %d     | %G AND %V       |
-  | monthly               | %Y AND %m            |                 |
-  | yearly                | %Y                   |                 |
+This pattern MUST include `%Y', `%m' and `%d' when `org-journal-file-type' is
+`daily' or `weekly'. When `org-journal-file-type' is `monthly' this pattern
+MUST at least include `%Y' and `%m', and at least `%Y' when
+`org-journal-file-type' is `yearly'.
 
 Currently supported placeholders are:
 
 %Y is the year as decimal number, including the century.
 %m is the month as a decimal number (range 01 to 12).
 %d is the day as a decimal number (range 01 to 31).
-%G is the ISO 8601 week's year as a decimal number, including the century.
 %V is the ISO 8601 week number as a decimal number (range 01 to 53).
 %a is the locale’s abbreviated name of the day of week, %A the full name.
 %b is the locale's abbreviated name of the month, %B the full name.
@@ -388,7 +383,6 @@ Currently supported placeholders are:
 %Y is the year as decimal number, including the century.
 %m is the month as a decimal number (range 01 to 12).
 %d is the day as a decimal number (range 01 to 31).
-%G is the ISO 8601 week's year as a decimal number, including the century.
 %V is the ISO 8601 week number as a decimal number (range 01 to 53).
 %a is the locale’s abbreviated name of the day of week, %A the full name.
 %b is the locale's abbreviated name of the month, %B the full name.
@@ -452,7 +446,7 @@ buffer not open already, otherwise `nil'.")
   '(("%[aAbB]" . "\\\\(?4:[[:alpha:]]\\\\{3,\\\\}\\\\)")
     ("%d" . "\\\\(?3:[0-9]\\\\{2\\\\}\\\\)")
     ("%m" . "\\\\(?2:[0-9]\\\\{2\\\\}\\\\)")
-    ("%[YG]" . "\\\\(?1:[0-9]\\\\{4\\\\}\\\\)")
+    ("%Y" . "\\\\(?1:[0-9]\\\\{4\\\\}\\\\)")
     ("%V" . "[0-9]\\\\{2\\\\}")))
 
 (defvar org-journal--created-re "^ *:CREATED: +.*$"  "Regex to find created property.")
@@ -849,20 +843,24 @@ hook is run."
     ;; Insure `view-mode' is not active
     (view-mode -1)
 
+    (message "bufsz 1: %s" (buffer-size))
     (org-journal--insert-header time)
     (org-journal--insert-entry-header time)
     (org-journal--decrypt)
 
+    (message "bufsz 2: %s" (buffer-size))
     ;; Move TODOs from previous day to new entry
     (when (and org-journal-carryover-items
                (not (string-blank-p org-journal-carryover-items))
                (string= entry-path (org-journal--get-entry-path (current-time))))
       (org-journal--carryover))
 
+    (message "bufsz 3: %s" (buffer-size))
     (if (org-journal--is-date-prefix-org-heading-p)
         (outline-end-of-subtree)
       (goto-char (point-max)))
 
+    (message "bufsz 4: %s" (buffer-size))
     (when should-add-entry-p
       (org-journal--insert-entry time org-extend-today-until-active-p no-timestamp))
 
@@ -870,6 +868,7 @@ hook is run."
         (outline-hide-sublevels (org-journal--time-entry-level))
       (save-excursion (org-journal--finalize-view)))
 
+    (message "bufsz 5: %s" (buffer-size))
     (when should-add-entry-p
       (outline-show-entry))))
 
@@ -951,20 +950,33 @@ If the parent heading has no more content, delete it as well."
 
 Will insert `entries', and run `org-journal-handle-old-carryover' function
 to process the carryover entries in `prev-buffer'."
+  (message "bufsz 2b1A: %s" (buffer-size))
   (when entries
     (if (org-journal--is-date-prefix-org-heading-p)
         (progn
+          (message "2b1A -- 1")
           (while (org-up-heading-safe))
-          (outline-end-of-subtree))
+          (message "uphead: current-column is %d, point is %d, point-max is %d, bolp is %s" (current-column) (point) (point-max) (bolp))
+          (outline-end-of-subtree)
+          (message "endofst: current-column is %d, point is %d, point-max is %d, bolp is %s" (current-column) (point) (point-max) (bolp))
+          )
+      (message "2b1A -- 2")
       (goto-char (point-max)))
 
+    (message "bufsz 2b1B: %s" (buffer-size))
     ;; Insure `view-mode' is not active
     (view-mode -1)
 
-    (unless (eq (current-column) 0) (insert "\n"))
+    (message "bufsz 2b1C: %s" (buffer-size))
 
+    (message "current-column is %d, point is %d, point-max is %d, bolp is %s" (current-column) (point) (point-max) (bolp))
+    
+    (unless (eq (current-column) 0) (message "extra insert") (insert "\n"))
+
+    (message "bufsz 2b1D: %s" (buffer-size))
     (insert text)
 
+    (message "bufsz 2b1E: %s" (buffer-size))
     (save-excursion
       (if (org-journal--daily-p)
           (goto-char (point-min))
@@ -989,8 +1001,10 @@ to process the carryover entries in `prev-buffer'."
                                         (org-journal--entry-date->calendar-date))))))
              nil nil nil 1)))))
 
+    (message "bufsz 2b1F: %s" (buffer-size))
     (outline-end-of-subtree)
 
+    (message "bufsz 2b1G: %s" (buffer-size))
     ;; Process carryover entries in the previous day's journal
     (with-current-buffer prev-buffer
       (funcall org-journal-handle-old-carryover entries))))
@@ -1009,6 +1023,8 @@ previous day's file to the current file."
                      headings)))
          carryover-paths prev-buffer)
 
+    (message "bufsz 2a: %s" (buffer-size)) 
+   
     ;; Get carryover paths
     (save-excursion
       (save-restriction
@@ -1018,6 +1034,7 @@ previous day's file to the current file."
             (org-narrow-to-subtree))
           (setq carryover-paths (org-map-entries mapper org-journal-carryover-items)))))
 
+    (message "bufsz 2b: %s" (buffer-size))
     (when (and prev-buffer carryover-paths)
       (let (cleared-carryover-paths text)
         ;; Construct the text to carryover, and remove any duplicate elements from carryover-paths
@@ -1038,9 +1055,13 @@ previous day's file to the current file."
                            (setcdr (last cleared-carryover-paths) cleared-paths)
                          (setq cleared-carryover-paths cleared-paths))
                  (setq prev-paths paths)))
-        (org-journal-carryover-items text cleared-carryover-paths prev-buffer))
+        (message "bufsz 2b1: %s" (buffer-size))
+        (org-journal-carryover-items text cleared-carryover-paths prev-buffer)
+        (message "bufsz 2b2: %s" (buffer-size))
+        )
       (org-journal--carryover-delete-empty-journal prev-buffer))
 
+    (message "bufsz 2c: %s" (buffer-size))
     (when org-journal--kill-buffer
       (mapc 'kill-buffer org-journal--kill-buffer)
       (setq org-journal--kill-buffer nil))))
