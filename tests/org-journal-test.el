@@ -41,6 +41,7 @@
 (defun org-journal-dir-test-setup ()
   "Create temporary directory."
   (message "ZZZ: setup for %s" org-journal-dir-test)
+  (directory-files org-journal-dir-test)
   (when (file-exists-p org-journal-dir-test)
     (message "ZZZ: Deleting!")
     (delete-directory org-journal-dir-test t))
