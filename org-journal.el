@@ -966,7 +966,7 @@ to process the carryover entries in `prev-buffer'."
 
     (message "bufsz 2b1C: %s" (buffer-size))
 
-    (message "current-column is %d, point is %d, point-max is %d" (current-column) (point) (point-max))
+    (message "current-column is %d, point is %d, point-max is %d, bolp is %s" (current-column) (point) (point-max) (bolp))
     
     (unless (eq (current-column) 0) (message "extra insert") (insert "\n"))
 
