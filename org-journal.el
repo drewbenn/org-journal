@@ -843,20 +843,24 @@ hook is run."
     ;; Insure `view-mode' is not active
     (view-mode -1)
 
+    (message "bufsz 1: %s" (buffer-size))
     (org-journal--insert-header time)
     (org-journal--insert-entry-header time)
     (org-journal--decrypt)
 
+    (message "bufsz 2: %s" (buffer-size))
     ;; Move TODOs from previous day to new entry
     (when (and org-journal-carryover-items
                (not (string-blank-p org-journal-carryover-items))
                (string= entry-path (org-journal--get-entry-path (current-time))))
       (org-journal--carryover))
 
+    (message "bufsz 3: %s" (buffer-size))
     (if (org-journal--is-date-prefix-org-heading-p)
         (outline-end-of-subtree)
       (goto-char (point-max)))
 
+    (message "bufsz 4: %s" (buffer-size))
     (when should-add-entry-p
       (org-journal--insert-entry time org-extend-today-until-active-p no-timestamp))
 
@@ -864,6 +868,7 @@ hook is run."
         (outline-hide-sublevels (org-journal--time-entry-level))
       (save-excursion (org-journal--finalize-view)))
 
+    (message "bufsz 5: %s" (buffer-size))
     (when should-add-entry-p
       (outline-show-entry))))
 
