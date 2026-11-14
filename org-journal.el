@@ -1120,7 +1120,7 @@ This is the counterpart of `org-journal--file-name->calendar-date' for
         date)
     (setq date (org-entry-get (point) "CREATED" inherit))
     (unless (ignore-errors (string-match re date))
-      (user-error "Created property timestamp format \"%s\" doesn't match CREATED property value (%s) from entry at line: %s in %s" org-journal-created-property-timestamp-format date (what-line)) (current-buffer))
+      (user-error "Created property timestamp format \"%s\" doesn't match CREATED property value (%s) from entry at line: %s in %s" org-journal-created-property-timestamp-format date (what-line) (current-buffer)))
     (list (string-to-number (match-string 2 date))    ;; Month
           (string-to-number (match-string 3 date))    ;; Day
           (string-to-number (match-string 1 date))))) ;; Year
