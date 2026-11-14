@@ -956,7 +956,10 @@ to process the carryover entries in `prev-buffer'."
         (progn
           (message "2b1A -- 1")
           (while (org-up-heading-safe))
-          (outline-end-of-subtree))
+          (message "uphead: current-column is %d, point is %d, point-max is %d, bolp is %s" (current-column) (point) (point-max) (bolp))
+          (outline-end-of-subtree)
+          (message "endofst: current-column is %d, point is %d, point-max is %d, bolp is %s" (current-column) (point) (point-max) (bolp))
+          )
       (message "2b1A -- 2")
       (goto-char (point-max)))
 
