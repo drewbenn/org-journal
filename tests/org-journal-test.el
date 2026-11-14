@@ -115,8 +115,10 @@
      (kill-buffer buffer)
      (should (not (stringp (org-journal-read-or-display-entry (encode-time 0 0 0 2 1 2019)))))
      (kill-buffer buffer)
+     (message "buffer size 1: %s" (buffer-size))
      (org-journal-new-entry t)
      (save-buffer)
+     (message "buffer size 2: %s" (buffer-size))
      (kill-buffer) ;; Kills new journal file buffer
      (kill-buffer buffer)
      (should (not (stringp (org-journal-read-or-display-entry (encode-time 0 0 0 1 1 2019)))))
