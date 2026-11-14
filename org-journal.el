@@ -1008,6 +1008,8 @@ previous day's file to the current file."
                      headings)))
          carryover-paths prev-buffer)
 
+    (message "bufsz 2a: %s" (buffer-size)) 
+   
     ;; Get carryover paths
     (save-excursion
       (save-restriction
@@ -1017,6 +1019,7 @@ previous day's file to the current file."
             (org-narrow-to-subtree))
           (setq carryover-paths (org-map-entries mapper org-journal-carryover-items)))))
 
+    (message "bufsz 2b: %s" (buffer-size))
     (when (and prev-buffer carryover-paths)
       (let (cleared-carryover-paths text)
         ;; Construct the text to carryover, and remove any duplicate elements from carryover-paths
@@ -1040,6 +1043,7 @@ previous day's file to the current file."
         (org-journal-carryover-items text cleared-carryover-paths prev-buffer))
       (org-journal--carryover-delete-empty-journal prev-buffer))
 
+    (message "bufsz 2c: %s" (buffer-size))
     (when org-journal--kill-buffer
       (mapc 'kill-buffer org-journal--kill-buffer)
       (setq org-journal--kill-buffer nil))))
