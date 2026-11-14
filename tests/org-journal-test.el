@@ -38,6 +38,9 @@
 
 (defvar org-journal-dir-test (make-temp-file "org-journal-" t))
 
+
+(file-truename (buffer-file-name (current-buffer)))
+
 (defun org-journal-dir-test-setup ()
   "Create temporary directory."
   (message "ZZZ: setup for %s" org-journal-dir-test)
@@ -47,7 +50,11 @@
   (when (file-exists-p org-journal-dir-test) (message "ZZZ: Warning!!"))
   ;; Kill leftover buffers from previous failed test
   (dolist (buffer (buffer-list))
-    (message "For buffer %s at %s and test %s, aka %s" buffer (or (buffer-file-name buffer) "none") org-journal-dir-test (file-truename (buffer-file-name buffer)))
+    (message "For buffer %s at %s and test %s, aka %s"
+             buffer
+             (or (buffer-file-name buffer) "none")
+             org-journal-dir-test
+             (file-truename (buffer-file-name buffer)))
     (when (and (buffer-file-name buffer) (string-match org-journal-dir-test (buffer-file-name buffer)))
       (message "---deleting")
       (with-current-buffer buffer
