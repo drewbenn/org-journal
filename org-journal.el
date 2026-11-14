@@ -955,7 +955,8 @@ to process the carryover entries in `prev-buffer'."
     (if (org-journal--is-date-prefix-org-heading-p)
         (progn
           (while (org-up-heading-safe))
-          (outline-end-of-subtree))
+          (org-end-of-subtree)
+          (or (eobp) (forward-char 1)))
       (goto-char (point-max)))
 
     ;; Insure `view-mode' is not active
