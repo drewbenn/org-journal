@@ -83,8 +83,9 @@
           org-journal-enable-encryption)
      (org-journal-invalidate-cache)
      (org-journal-dir-test-setup)
+     (message "files before starting: %s" (directory-files org-journal-dir-test))
      ,@body
-     (directory-files org-journal-dir-test)
+     (message "files left behind: %s" (directory-files org-journal-dir-test))
      (delete-directory org-journal-dir-test t)
      (delete-file (concat org-journal-dir-test "-link"))))
 (def-edebug-spec org-journal-test-macro (body))
