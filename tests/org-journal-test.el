@@ -39,8 +39,6 @@
 (defvar org-journal-dir-test (make-temp-file "org-journal-" t))
 
 
-(file-truename (buffer-file-name (current-buffer)))
-
 (defun org-journal-dir-test-setup ()
   "Create temporary directory."
   (message "ZZZ: setup for %s" org-journal-dir-test)
@@ -54,7 +52,7 @@
              buffer
              (or (buffer-file-name buffer) "none")
              org-journal-dir-test
-             (file-truename (buffer-file-name buffer)))
+             (if (buffer-file-name buffer) (file-truename (buffer-file-name buffer)) "still none"))
     (when (and (buffer-file-name buffer) (string-match org-journal-dir-test (buffer-file-name buffer)))
       (message "---deleting")
       (with-current-buffer buffer
