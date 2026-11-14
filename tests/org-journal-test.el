@@ -53,7 +53,7 @@
              (or (buffer-file-name buffer) "none")
              org-journal-dir-test
              (if (buffer-file-name buffer) (file-truename (buffer-file-name buffer)) "still none"))
-    (when (and (buffer-file-name buffer) (string-match org-journal-dir-test (buffer-file-name buffer)))
+    (when (and (buffer-file-name buffer) (string-match (file-truename org-journal-dir-test) (buffer-file-name buffer)))
       (message "---deleting")
       (with-current-buffer buffer
         (set-buffer-modified-p nil)
