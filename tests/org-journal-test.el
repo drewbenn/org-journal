@@ -263,7 +263,7 @@
         ;; Daily build file boundary check
         (setq period-start (encode-time 0 0 0 4 1 2017)
               period-end (encode-time 0 0 0 1 2 2019))
-;;        (funcall create-files test-file-daily)
+        (funcall create-files test-file-daily)
 ;;        (should (equal (length (org-journal--search-build-file-list period-start period-end)) 1))
 
         ;; ;; Weekly build file boundary check
