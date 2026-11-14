@@ -1119,6 +1119,7 @@ This is the counterpart of `org-journal--file-name->calendar-date' for
   (let ((re (org-journal--format->regex org-journal-created-property-timestamp-format))
         date)
     (setq date (org-entry-get (point) "CREATED" inherit))
+    (message "ZZZ: in buffer %s at %s" (current-buffer) (buffer-file-name))
     (unless (ignore-errors (string-match re date))
       (user-error "Created property timestamp format \"%s\" doesn't match CREATED property value (%s) from entry at line: %s in %s" org-journal-created-property-timestamp-format date (what-line) (current-buffer)))
     (list (string-to-number (match-string 2 date))    ;; Month
