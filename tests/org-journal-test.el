@@ -70,7 +70,8 @@
 (defmacro org-journal-test-macro (&rest body)
   "Wrapp a `org-journal' -- `ert'-test with default values."
   (declare (indent 1))
-  `(let* ((org-journal-dir (concat org-journal-dir-test "-link"))
+  `(let* ((org-journal-dir-test (make-temp-file "org-journal-" t))
+          (org-journal-dir (concat org-journal-dir-test "-link"))
           (comment-start-skip "^\\s-*#\\(?: \\|$\\)")
           (org-journal--cache-file (expand-file-name  "org-journal.cache" org-journal-dir-test))
           (org-journal-file-type 'daily)
