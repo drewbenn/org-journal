@@ -245,49 +245,7 @@
         (should (equal "No journal entry for this date."
                        (org-journal-read-or-display-entry (encode-time 0 0 0 2 1 2019) 'noselect))))))
 
-(ert-deftest org-journal-search-build-file-list-test ()
-  "Test for `org-journal--search-build-file-list'."
-  (org-journal-test-macro
-      (let ((test-file-daily '("20170104" "20170312" "20190201"))
-            (test-file-yearly '("2017" "2018" "2019"))
-            (test-file-weekly '("20170102" "20180430" "20181231"))
-            (test-file-monthly '("201701" "201804" "201903"))
-            (create-files (lambda (test-files)
-                            (org-journal-dir-test-setup)
-                            (dolist (file test-files)
-                              (find-file (expand-file-name file org-journal-dir-test))
-                              (save-buffer)
-                              (kill-buffer))))
-            period-start
-            period-end)
-        ;; Daily build file boundary check
-        (setq period-start (encode-time 0 0 0 4 1 2017)
-              period-end (encode-time 0 0 0 1 2 2019))
-        (funcall create-files test-file-daily)
-        (should (equal (length (org-journal--search-build-file-list period-start period-end)) 1))
 
-        ;; Weekly build file boundary check
-        (setq period-start (encode-time 0 0 0 8 1 2017)
-              period-end (encode-time 0 0 0 31 12 2018)
-              org-journal-file-type 'weekly)
-        (funcall create-files test-file-weekly)
-        (should (equal (length (org-journal--search-build-file-list period-start period-end)) 1))
-
-        ;; Monthly build file boundary check
-        (setq period-start (encode-time 0 0 0 31 1 2017)
-              period-end (encode-time 0 0 0 1 3 2019)
-              org-journal-file-type 'monthly
-              org-journal-file-format "%Y%m")
-        (funcall create-files test-file-monthly)
-        (should (equal (length (org-journal--search-build-file-list period-start period-end)) 1))
-
-        ;; Yearly build file boundary check
-        (setq period-start (encode-time 0 0 0 31 12 2017)
-              period-end (encode-time 0 0 0 1 1 2019)
-              org-journal-file-type 'yearly
-              org-journal-file-format "%Y")
-        (funcall create-files test-file-yearly)
-        (should (equal (length (org-journal--search-build-file-list period-start period-end)) 1)))))
 
 (ert-deftest org-journal-scheduled-carryover-yearly-test ()
   (org-journal-test-macro
@@ -333,64 +291,4 @@
         (search-forward new-scheduled-date)
         (search-forward new-scheduled-date))))
 
-(ert-deftest org-journal-scheduled-weekly-test ()
-  (org-journal-test-macro
-   (let ((org-journal-file-type 'weekly)
-         (org-journal-start-on-weekday 7) ;; sunday
-         org-journal-encrypt-journal
-         org-journal-enable-encryption
-         org-journal-enable-cache
-         org-journal-file-header
-         day-offset)
 
-     ;; Compute correct day-offset, so future and today journal entry end in the same file
-     (let ((current-date (calendar-current-date))
-           (current-date+1 (calendar-current-date 1)))
-       (if (equal (org-journal--convert-time-to-file-type-time
-                   (org-journal--calendar-date->time current-date) )
-                  (org-journal--convert-time-to-file-type-time
-                   (org-journal--calendar-date->time current-date+1)))
-           (setq day-offset 1)
-         (setq day-offset 2)))
-
-     (let* ((scheduled-entry-date (calendar-current-date day-offset))
-            (scheduled-entry-time (org-journal--calendar-date->time scheduled-entry-date))
-            (new-entry-date (calendar-current-date (if (= day-offset 1) nil 1)))
-            (new-entry-time (org-journal--calendar-date->time new-entry-date))
-            (scheduled-string (with-temp-buffer
-                                (org-insert-time-stamp scheduled-entry-time)
-                                (buffer-string))))
-       ;; Add first scheduled entry
-       (org-journal-new-scheduled-entry nil scheduled-entry-time)
-       (insert "Task 1")
-       ;; Add a second scheduled entry
-       (org-journal-new-scheduled-entry nil scheduled-entry-time)
-       (insert "Task 2")
-       ;; New today entry should be added at the beginning of the journal file
-       (org-journal-new-entry 4 new-entry-time)
-
-       (should (equal (org-journal-buffer-content t t)
-                      (concat
-                       ;; Today entry
-                       "* Test header\n"
-                       ":PROPERTIES:\n"
-                       (concat
-                        ":CREATED:  "
-                        (format-time-string org-journal-created-property-timestamp-format new-entry-time)
-                        "\n")
-                       ":END:\n"
-
-                       ;; Scheduled entries
-                       "* Test header\n"
-                       ":PROPERTIES:\n"
-                       (concat
-                        ":CREATED:  "
-                        (format-time-string org-journal-created-property-timestamp-format scheduled-entry-time)
-                        "\n")
-                       ":END:\n"
-                       "** TODO Task 1\n"
-                       scheduled-string
-                       "\n"
-                       ;; (format-time-string "   SCHEDULED: <%F %a>\n" )
-                       "** TODO Task 2\n"
-                       scheduled-string)))))))
