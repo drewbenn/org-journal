@@ -956,7 +956,7 @@ to process the carryover entries in `prev-buffer'."
         (progn
           (while (org-up-heading-safe))
           (outline-end-of-subtree)
-          ;;TODO:TEST;(or (bolp) (eobp) (forward-char 1))
+          (or (bolp) (eobp) (forward-char 1))
           )
       (goto-char (point-max)))
 
