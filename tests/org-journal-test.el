@@ -41,7 +41,9 @@
 (defun org-journal-dir-test-setup ()
   "Create temporary directory."
   (when (file-exists-p org-journal-dir-test)
+    (message "Deleting!")
     (delete-directory org-journal-dir-test t))
+  (when (file-exists-p org-journal-dir-test) (message "Warning!!"))
   ;; Kill leftover buffers from previous failed test
   (dolist (buffer (buffer-list))
     (when (and (buffer-file-name buffer) (string-match org-journal-dir-test (buffer-file-name buffer)))
