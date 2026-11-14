@@ -47,7 +47,9 @@
   (when (file-exists-p org-journal-dir-test) (message "ZZZ: Warning!!"))
   ;; Kill leftover buffers from previous failed test
   (dolist (buffer (buffer-list))
+    (message "For buffer %s at %s and test %s" buffer (or (buffer-file-name buffer) "none") org-journal-dir-test)
     (when (and (buffer-file-name buffer) (string-match org-journal-dir-test (buffer-file-name buffer)))
+      (message "---deleting")
       (with-current-buffer buffer
         (set-buffer-modified-p nil)
         (kill-buffer buffer))))
@@ -86,15 +88,19 @@
      (org-journal-dir-test-setup)
      (message "files before starting: %s" (directory-files org-journal-dir-test))
      (message "buffers before starting: %s" (buffer-list))
+     (kill-matching-buffers-no-ask "^[^*]")
+     (message "buffers before starting: %s" (buffer-list))
      ,@body
      (message "buffers left behind: %s" (buffer-list))
+     (dolist (buf (buffer-list))
+       (kill-buffer buf))
      (message "files left behind: %s" (directory-files org-journal-dir-test))
      (delete-directory org-journal-dir-test t)
      (delete-file (concat org-journal-dir-test "-link"))))
 (def-edebug-spec org-journal-test-macro (body))
 
 
-
+(kill-matching-buffers "^[^*]")
 
 
 
@@ -189,7 +195,8 @@ TODO: deleting this test allows widen+yearly to pass"
         (kill-buffer)
         (should (equal "No journal entry for this date."
                        (org-journal-read-or-display-entry (encode-time 0 0 0 2 1 2019) 'noselect)))
-        (kill-buffer "20190101"))))
+                                        ;(kill-buffer "20190101")
+        )))
 
 (ert-deftest org-journal-scheduled-carryover-yearly-test ()
   (org-journal-test-macro
