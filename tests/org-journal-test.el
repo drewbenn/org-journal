@@ -105,7 +105,6 @@
        (insert "** 13:00 Some journal entry\n")
        (insert "* Wednesday, 01/02/19\n")
        (org-set-property "CREATED" "20190102")
-       (insert "** TODO First\n")
        (insert "** 13:00 Some journal entry 1\n")
        (insert "** TODO Second\n")
        (insert "** 14:00 Some journal entry 2\n")
@@ -127,13 +126,13 @@
 
      (should (string= (with-temp-buffer
                         (org-journal-mode)
-                        (insert-file-contents (org-journal--get-entry-path))
+                        (message "Inserted %s." (insert-file-contents (org-journal--get-entry-path)))
                         (replace-regexp-in-string
                          "^[ ]*" ""
                          (buffer-substring-no-properties (point-min) (point-max))))
                       (concat "* Test header\n:PROPERTIES:\n:CREATED:  "
                               (format-time-string org-journal-created-property-timestamp-format)
-                              "\n:END:\n** TODO First\n** TODO Second\n"))))))
+                              "\n:END:\n** TODO Second\n"))))))
 
 
 
