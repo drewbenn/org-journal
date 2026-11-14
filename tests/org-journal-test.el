@@ -85,7 +85,9 @@
      (org-journal-invalidate-cache)
      (org-journal-dir-test-setup)
      (message "files before starting: %s" (directory-files org-journal-dir-test))
+     (message "buffers before starting: %s" (buffer-list))
      ,@body
+     (message "buffers left behind: %s" (buffer-list))
      (message "files left behind: %s" (directory-files org-journal-dir-test))
      (delete-directory org-journal-dir-test t)
      (delete-file (concat org-journal-dir-test "-link"))))
