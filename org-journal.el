@@ -703,16 +703,15 @@ If no TIME is given, uses the current time."
     (user-error
      "The value of `org-journal-file-type' must be symbol, not a %s"
      (type-of org-journal-file-type)))
-  (unless (or
-     (not org-journal-display-type)
-     (and (equal org-journal-display-type 'monthly) (equal org-journal-file-type 'yearly))
-     (and (equal org-journal-display-type 'weekly)
-          (or (equal org-journal-file-type 'monthly)
-              (equal org-journal-file-type 'yearly)))
-     (and (equal org-journal-display-type 'daily)
-          (or (equal org-journal-file-type 'weekly)
-              (equal org-journal-file-type 'monthly)
-              (equal org-journal-file-type 'yearly))))
+  (unless (or (not org-journal-display-type)
+              (and (equal org-journal-display-type 'monthly) (equal org-journal-file-type 'yearly))
+              (and (equal org-journal-display-type 'weekly)
+                   (or (equal org-journal-file-type 'monthly)
+                       (equal org-journal-file-type 'yearly)))
+              (and (equal org-journal-display-type 'daily)
+                   (or (equal org-journal-file-type 'weekly)
+                       (equal org-journal-file-type 'monthly)
+                       (equal org-journal-file-type 'yearly))))
     (user-error "The value of `org-journal-display-type' must be valid and finer-grained than the value of `org-journal-file-type'")))
 
 (defun org-journal--set-current-tag-alist ()
@@ -2127,7 +2126,7 @@ enabling encryption by default."
     (`monthly (and (= (car day1) (car day2)) (= (nth 2 day1) (nth 2 day2))))
     (`yearly (= (nth 2 day1) (nth 2 day2)))
     (_ nil)))
-  
+
 (defun org-journal--narrow-to-display-selection (&optional time)
   "Narrow the buffer to `org-journal-display-type` at point.
 
