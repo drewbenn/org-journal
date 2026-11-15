@@ -197,7 +197,7 @@ Customization options related to journal directory and files:
   =org-journal-start-on-weekday= won't work for existing weekly journal files.
 
 - =org-journal-display-type= - the journal display type either nil
-  (not enabled, (default), 'weekly or 'monthly. When enabled, the
+  (not enabled (default), 'daily, 'weekly or 'monthly. When enabled, the
   display is narrowed to this view so you can, for example, view only
   a week at a time while storing all the entries for a year in a
   single file. If you are in this mode and want to see the full file,
@@ -208,8 +208,8 @@ Customization options related to journal directory and files:
   this won't build a combined view from 2 different files.
 
   There is no display-type analogue for =org-journal-file-header=, so
-  you can't insert something when you create a new journal entry in a
-  new display type.
+  you can't automatically insert something when you create a new journal
+  entry in a new display type but existing file type.
 
 *** Journal File Content
 
@@ -525,7 +525,7 @@ We format the code using =common-lisp-indent-function= rather than the default
 
 #+BEGIN_SRC emacs-lisp
   (setq lisp-indent-function 'common-lisp-indent-function)
-  ;; Mark the whole buffer: C-x h
+  ;; Markt the whole buffer: C-x h
   ;; Call indent-region: C-M-\
 #+END_SRC
 

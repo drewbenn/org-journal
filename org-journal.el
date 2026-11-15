@@ -1,4 +1,4 @@
-;;; org-journal.el --- A simple org-mode based journaling mode -*- lexical-binding: t; -*-
+;;; org-journal.el --- a simple org-mode based journaling mode -*- lexical-binding: t; -*-
 
 ;; Copyright 2013-2024 Bastian Bechtold
 
@@ -563,7 +563,7 @@ before it will be deposed."
 (defun org-journal-after-save-hook ()
   "Update agenda files and dates."
   (save-restriction
-    (widen);TODO:breaks CI on Windows for some reason;(widen)
+    (widen)
     (org-journal--update-org-agenda-files)
     (org-journal--dates-puthash)
     (org-journal--serialize)))
@@ -875,7 +875,7 @@ hook is run."
     (unless (string= entry-path (buffer-file-name))
       (funcall org-journal-find-file entry-path))
 
-    ;; Ensure `view-mode' is not active
+    ;; Insure `view-mode' is not active
     (view-mode -1)
 
     (widen)
@@ -1139,8 +1139,7 @@ Month and Day capture group default to 1."
 (defun org-journal--entry-date->calendar-date (&optional inherit)
   "Return journal calendar-date from current buffer.
 
-If INHERIT is t you won't need to
-`(save-excursion (org-up-heading-safe))` first.
+If INHERIT is t you can get the parent's date.
 
 This is the counterpart of `org-journal--file-name->calendar-date' for
 `weekly', `monthly' and `yearly' journal files."
@@ -1167,7 +1166,7 @@ Extracted from org-roam (org-roam-end-of-meta-data)."
       file
     (let (dates)
       (save-excursion
-        (widen);TODO:breaks CI on Windows for some reason;(widen)
+        (widen)
         (goto-char (point-min))
         (org-journal--skip-meta-data)
         (while (re-search-forward org-journal--created-re nil t)
@@ -1482,8 +1481,7 @@ from oldest to newest."
    (list current-prefix-arg last-nonmenu-event))
   (let* ((time (org-journal--calendar-date->time
                 (calendar-cursor-to-date t event))))
-    (org-journal-read-or-display-entry time t)
-    (org-journal--narrow-to-display-selection time)))
+    (org-journal-read-or-display-entry time t)))
 
 (defun org-journal--finalize-view ()
   "Finalize visability of entry."
