@@ -854,6 +854,7 @@ hook is run."
   (org-journal--sanity-checks)
   (org-journal--create-journal-dir)
 
+  ;;TODO: consider adding `C-u C-u C-c C-j' to narrow to current display unit;;(when (not (equal (car prefix) 16))
   ;; If time is before org-extend-today-until, interpret it as
   ;; part of the previous day:
   (let* ((now (decode-time nil))
@@ -901,6 +902,7 @@ hook is run."
 
     (when should-add-entry-p
       (outline-show-entry)))
+  ;;TODO: double-prefix for narrowing to current display type;;)
   (org-journal--narrow-to-display-selection))
 
 (defun org-journal--empty-journal-p (prev-buffer)
@@ -1471,7 +1473,7 @@ from oldest to newest."
   (let* ((time (org-journal--calendar-date->time
                 (calendar-cursor-to-date t event))))
     (org-journal-read-or-display-entry time nil)
-    (org-journal--narrow-to-display-selection time)))
+    (org-journal--narrow-to-display-selection (org-journal--entry-date->calendar-date t))))
 
 ;;;###autoload
 (defun org-journal-display-entry (_arg &optional event)
@@ -1598,7 +1600,6 @@ period (which is where we want to be) or we have reached a new buffer
          match-started)
     (if (not start-date)
         (message "Not inside an org-journal entry: can't change display period.")
-      (setq true-start-date start-date)
       (catch 'done
         (dolist (date (if prev
                           (reverse (org-journal--list-dates))
@@ -1631,7 +1632,8 @@ With prefix, move multiple journal display periods."
 
 With prefix, move multiple journal display periods."
   (interactive "P")
-  (org-journal--next-display-type repeat t))
+  (org-journal--next-display-type repeat t)
+  (while (org-up-heading-safe)))
 
 
 ;;; Journal search facilities
@@ -2138,11 +2140,9 @@ ORG-JOURNAL-DISPLAY-TYPE. Narrows the current buffer to the
 display-type period so e.g. you can display just one week at a time
 while storing an entire year at a time.
 
-TODO: better documentation now that I've changed it
-TODO: assumes `org-journal-created-property-timestamp-format' is %F (default)"
+TODO: better documentation now that I've changed it"
   (interactive)
   (when org-journal-display-type
-
     (let (display-start-point display-end-point first-date last-date)
 
       ;; Get the date `'(mm dd yyyy)' at point, if not already specified
@@ -2158,32 +2158,31 @@ TODO: assumes `org-journal-created-property-timestamp-format' is %F (default)"
               (or first-date (setq first-date date))
             (when first-date (throw 'done (setq last-date date))))))
 
-      ;; Find `(point)' for both those entries
-      (widen)
+      (save-excursion
+        (widen)
 
-      (setq display-start-point (goto-char (point-min)))
-      (and first-date
-           (org-journal--search-forward-created first-date nil t)
-           (or (org-up-heading-safe) t)
-           (setq display-start-point (point)))
+        (setq display-start-point (goto-char (point-min)))
+        (and first-date
+             (org-journal--search-forward-created first-date nil t)
+             (or (org-up-heading-safe) t)
+             (setq display-start-point (point)))
 
-      (or (and last-date
-               (org-journal--search-forward-created last-date nil t)
-               (or (org-up-heading-safe) t)
-               (setq display-end-point (1- (point))))
-          (setq display-end-point (1+ (buffer-size))))
+        (or (and last-date
+                 (org-journal--search-forward-created last-date nil t)
+                 (or (org-up-heading-safe) t)
+                 (setq display-end-point (1- (point))))
+            (setq display-end-point (1+ (buffer-size))))
       
-      ;; Narrow to the entries and then fold per user's settings
-      (narrow-to-region display-start-point display-end-point)
+        ;; Narrow to the entries and then fold per user's settings
+        (narrow-to-region display-start-point display-end-point)
 
-      (goto-char (point-min))
-      (org-journal--search-forward-created time nil t)
-      (org-up-heading-safe)
+        (goto-char (point-min))
+        (org-journal--search-forward-created time nil t)
+        (org-up-heading-safe)
       
-      (if (and org-journal-hide-entries-p (org-journal--time-entry-level))
-          (outline-hide-sublevels (org-journal--time-entry-level))
-        (save-excursion (org-journal--finalize-view))))))
-
+        (if (and org-journal-hide-entries-p (org-journal--time-entry-level))
+            (outline-hide-sublevels (org-journal--time-entry-level))
+          (org-journal--finalize-view))))))
 
 (provide 'org-journal)
 
