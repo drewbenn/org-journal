@@ -44,7 +44,7 @@
     (delete-directory org-journal-dir-test t))
   ;; Kill leftover buffers from previous failed test
   (dolist (buffer (buffer-list))
-    (when (and (buffer-file-name buffer) (string-match org-journal-dir-test (buffer-file-name buffer)))
+    (when (and (buffer-file-name buffer) (string-match (file-truename org-journal-dir-test) (buffer-file-name buffer)))
       (with-current-buffer buffer
         (set-buffer-modified-p nil)
         (kill-buffer buffer))))

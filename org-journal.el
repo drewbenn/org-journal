@@ -74,8 +74,8 @@
 ;; day. This is customizable through org-journal-carryover-items.
 ;;
 ;; Quick summary:
-;; To create a new journal entry for the current time and day: M-x org-journal-new-entry
-;; To open today's journal without creating a new entry: C-u M-x org-journal-new-entry
+;; To create a new journal entry for the current time and day: M-x org-journal-new-entry (C-c C-j)
+;; To open today's journal without creating a new entry: C-u M-x org-journal-new-entry (C-u C-c C-j)
 ;; In calendar view: j m to mark entries in calendar
 ;;                   j r to view an entry in a new buffer
 ;;                   j d to view an entry but not switch to it
@@ -141,6 +141,18 @@ From branch \"emacs-26\", added for compatibility.
                                    org-journal-default-enable-encryption)
   "Hook to run when `org-journal-mode' is loaded."
   :type 'hook)
+
+(defcustom org-journal-display-type nil
+  "What type of journal file to emulate, despite writing a different format.
+
+This lets you, for example, store your journal as a yearly file but only display
+one week at a time. This value needs to be shorter than org-journal-file-type;
+if nil, the feature is disabled."
+  :type '(choice
+          (const :tag "Disabled" nil)
+          (const :tag "Daily" daily)
+          (const :tag "Weekly" weekly)
+          (const :tag "Monthly" monthly)))
 
 (defcustom org-journal-file-type 'daily
   "What type of journal file to create.
@@ -409,7 +421,9 @@ This prefix key is used for:
 - `org-journal-next-entry' (key \"f\")
 - `org-journal-previous-entry' (key \"b\")
 - `org-journal-new-entry' (key \"j\")
-- `org-journal-search' (key \"s\")"
+- `org-journal-search' (key \"s\")
+- `org-journal-next-display-type' (key \"S-f\")
+- `org-journal-previous-display-type' (key \"S-b\")"
   :type 'string)
 
 (defcustom org-journal-scheduled-string ""      ; or org-scheduled-string
@@ -489,10 +503,12 @@ The key is a journal date entry, and the value of the key is of the form
 
 ;; Key bindings
 (when (and (stringp org-journal-prefix-key) (not (string-empty-p org-journal-prefix-key)))
-  (let ((command-table '(("f" . org-journal-next-entry)
-                         ("b" . org-journal-previous-entry)
-                         ("j" . org-journal-new-entry)
-                         ("s" . org-journal-search)))
+  (let ((command-table '(("f"   . org-journal-next-entry)
+                         ("b"   . org-journal-previous-entry)
+                         ("S-f" . org-journal-next-display-type)
+                         ("S-b" . org-journal-previous-display-type)
+                         ("j"   . org-journal-new-entry)
+                         ("s"   . org-journal-search)))
         (key-func (if (string-prefix-p "\\" org-journal-prefix-key)
                       #'concat
                     (lambda (prefix key) (kbd (concat prefix "" key))))))
@@ -546,9 +562,11 @@ before it will be deposed."
 
 (defun org-journal-after-save-hook ()
   "Update agenda files and dates."
-  (org-journal--update-org-agenda-files)
-  (org-journal--dates-puthash)
-  (org-journal--serialize))
+  (save-restriction
+    (widen)
+    (org-journal--update-org-agenda-files)
+    (org-journal--dates-puthash)
+    (org-journal--serialize)))
 
 (defun org-journal-is-journal ()
   "Determine if file is a journal file."
@@ -684,7 +702,17 @@ If no TIME is given, uses the current time."
   (unless (symbolp org-journal-file-type)
     (user-error
      "The value of `org-journal-file-type' must be symbol, not a %s"
-     (type-of org-journal-file-type))))
+     (type-of org-journal-file-type)))
+  (unless (or (not org-journal-display-type)
+              (and (equal org-journal-display-type 'monthly) (equal org-journal-file-type 'yearly))
+              (and (equal org-journal-display-type 'weekly)
+                   (or (equal org-journal-file-type 'monthly)
+                       (equal org-journal-file-type 'yearly)))
+              (and (equal org-journal-display-type 'daily)
+                   (or (equal org-journal-file-type 'weekly)
+                       (equal org-journal-file-type 'monthly)
+                       (equal org-journal-file-type 'yearly))))
+    (user-error "The value of `org-journal-display-type' must be valid and finer-grained than the value of `org-journal-file-type'")))
 
 (defun org-journal--set-current-tag-alist ()
   "Set `org-current-tag-alist' for the current journal file.
@@ -816,6 +844,9 @@ This allows the use of `org-journal-tag-alist' and
 With a PREFIX arg, open the today's file, create a heading if it
 doesn't exist yet, but do not create a new entry.
 
+With two universal prefix arguments (C-u C-u), don't insert anything
+and only narrow to the display period around point.
+
 If given a TIME, create an entry for the time's day. If no TIME
 was given, use the current time (which is interpreted as
 belonging to yesterday if smaller than `org-extend-today-until').
@@ -826,52 +857,56 @@ hook is run."
   (org-journal--sanity-checks)
   (org-journal--create-journal-dir)
 
-  ;; If time is before org-extend-today-until, interpret it as
-  ;; part of the previous day:
-  (let* ((now (decode-time nil))
-         (org-extend-today-until-active-p (and (not time) (< (nth 2 now) org-extend-today-until)))
-         (entry-path)
-         (should-add-entry-p (not prefix)))
-    (when org-extend-today-until-active-p
-      (setq time (encode-time (nth 0 now)
-                              (nth 1 now)
-                              (nth 2 now)
-                              (1- (nth 3 now))
-                              (nth 4 now)
-                              (nth 5 now)
-                              (nth 8 now))))
-    (setq entry-path (org-journal--get-entry-path time))
+  (if (and (equal (type-of prefix) 'cons) (equal (car prefix) 16) (org-journal-is-journal))
+      (org-journal--narrow-to-display-selection) ;; with C-u C-u, narrow around point
+    ;; If time is before org-extend-today-until, interpret it as
+    ;; part of the previous day:
+    (let* ((now (decode-time nil))
+           (org-extend-today-until-active-p (and (not time) (< (nth 2 now) org-extend-today-until)))
+           (entry-path)
+           (should-add-entry-p (not prefix)))
+      (when org-extend-today-until-active-p
+        (setq time (encode-time (nth 0 now)
+                                (nth 1 now)
+                                (nth 2 now)
+                                (1- (nth 3 now))
+                                (nth 4 now)
+                                (nth 5 now)
+                                (nth 8 now))))
+      (setq entry-path (org-journal--get-entry-path time))
 
-    ;; Open journal file
-    (unless (string= entry-path (buffer-file-name))
-      (funcall org-journal-find-file entry-path))
+      ;; Open journal file
+      (unless (string= entry-path (buffer-file-name))
+        (funcall org-journal-find-file entry-path))
 
-    ;; Insure `view-mode' is not active
-    (view-mode -1)
+      ;; Insure `view-mode' is not active
+      (view-mode -1)
 
-    (org-journal--insert-header time)
-    (org-journal--insert-entry-header time)
-    (org-journal--decrypt)
+      (widen)
+      (org-journal--insert-header time)
+      (org-journal--insert-entry-header time)
+      (org-journal--decrypt)
 
-    ;; Move TODOs from previous day to new entry
-    (when (and org-journal-carryover-items
-               (not (string-blank-p org-journal-carryover-items))
-               (string= entry-path (org-journal--get-entry-path (current-time))))
-      (org-journal--carryover))
+      ;; Move TODOs from previous day to new entry
+      (when (and org-journal-carryover-items
+                 (not (string-blank-p org-journal-carryover-items))
+                 (string= entry-path (org-journal--get-entry-path (current-time))))
+        (org-journal--carryover))
 
-    (if (org-journal--is-date-prefix-org-heading-p)
-        (outline-end-of-subtree)
-      (goto-char (point-max)))
+      (if (org-journal--is-date-prefix-org-heading-p)
+          (outline-end-of-subtree)
+        (goto-char (point-max)))
 
-    (when should-add-entry-p
-      (org-journal--insert-entry time org-extend-today-until-active-p no-timestamp))
+      (when should-add-entry-p
+        (org-journal--insert-entry time org-extend-today-until-active-p no-timestamp))
 
-    (if (and org-journal-hide-entries-p (org-journal--time-entry-level))
-        (outline-hide-sublevels (org-journal--time-entry-level))
-      (save-excursion (org-journal--finalize-view)))
+      (if (and org-journal-hide-entries-p (org-journal--time-entry-level))
+          (outline-hide-sublevels (org-journal--time-entry-level))
+        (save-excursion (org-journal--finalize-view)))
 
-    (when should-add-entry-p
-      (outline-show-entry))))
+      (when should-add-entry-p
+        (outline-show-entry)))
+    (org-journal--narrow-to-display-selection)))
 
 (defun org-journal--empty-journal-p (prev-buffer)
   (let (entry)
@@ -1105,14 +1140,16 @@ Month and Day capture group default to 1."
 
     (list month day year)))
 
-(defun org-journal--entry-date->calendar-date ()
+(defun org-journal--entry-date->calendar-date (&optional inherit)
   "Return journal calendar-date from current buffer.
+
+If INHERIT is t you can get the parent's date.
 
 This is the counterpart of `org-journal--file-name->calendar-date' for
 `weekly', `monthly' and `yearly' journal files."
   (let ((re (org-journal--format->regex org-journal-created-property-timestamp-format))
         date)
-    (setq date (org-entry-get (point) "CREATED"))
+    (setq date (org-entry-get (point) "CREATED" inherit))
     (unless (ignore-errors (string-match re date))
       (user-error "Created property timestamp format \"%s\" doesn't match CREATED property value (%s) from entry at line: %s" org-journal-created-property-timestamp-format date (what-line)))
     (list (string-to-number (match-string 2 date))    ;; Month
@@ -1133,6 +1170,7 @@ Extracted from org-roam (org-roam-end-of-meta-data)."
       file
     (let (dates)
       (save-excursion
+        (widen)
         (goto-char (point-min))
         (org-journal--skip-meta-data)
         (while (re-search-forward org-journal--created-re nil t)
@@ -1437,7 +1475,8 @@ from oldest to newest."
    (list current-prefix-arg last-nonmenu-event))
   (let* ((time (org-journal--calendar-date->time
                 (calendar-cursor-to-date t event))))
-    (org-journal-read-or-display-entry time nil)))
+    (org-journal-read-or-display-entry time nil)
+    (org-journal--narrow-to-display-selection (org-journal--entry-date->calendar-date t))))
 
 ;;;###autoload
 (defun org-journal-display-entry (_arg &optional event)
@@ -1473,6 +1512,7 @@ is nil or avoid switching when NOSELECT is non-nil."
                  ;; Search for journal entry
                  (with-current-buffer buf
                    (save-mark-and-excursion
+                     (widen)
                      (goto-char (point-min))
                      (setq time (decode-time time))
                      (setq point (org-journal--search-forward-created
@@ -1523,7 +1563,8 @@ If prev is non-nil open previous entry instead of next."
                  (when org-journal-follow-mode
                    (org-journal-display-entry nil)))))
             ((eq major-mode 'org-journal-mode)
-             (org-journal--open-entry prev))
+             (org-journal--open-entry prev)
+             (org-journal--narrow-to-display-selection))
             (t
              (user-error
               (concat "org-journal-" (if prev "previous" "next")
@@ -1541,6 +1582,56 @@ If prev is non-nil open previous entry instead of next."
   "Go to the previous journal entry."
   (interactive)
   (org-journal--next-entry t))
+
+(defun org-journal--next-display-type (repeat &optional prev)
+  "Move REPEAT display periods from point.
+
+If PREV is non-nil move backward in time instead of forward."
+  (or (eq 'integer (type-of repeat))
+      (setq repeat 1))
+
+  ;; Starting with the date of the entry at point,
+  ;; search the list of journal entries until we find one
+  ;; in a different display period or a different file.
+  ;; Stop when we run out of entries or we've found REPEAT differences.
+  (let* ((start-date (org-journal--entry-date->calendar-date t))
+         (true-start-date start-date)
+         match-started)
+    (catch 'done
+      (dolist (date (if prev
+                        (reverse (org-journal--list-dates))
+                      (org-journal--list-dates)))
+        (if (and (org-journal--display-dates-equalp date start-date)
+                 (equal (gethash date org-journal--dates) (gethash start-date org-journal--dates)))
+            (setq match-started t)
+          (when match-started
+            (setq start-date date) ;; found one; start searching for the _next_ period
+            (when (zerop (setq repeat (1- repeat)))
+              (throw 'done nil))))))
+
+    (if (and (org-journal--display-dates-equalp true-start-date start-date)
+             (equal (gethash true-start-date org-journal--dates) (gethash start-date org-journal--dates)))
+        ;; if we never moved display periods or files, we were already at the end
+        (message (concat "No journal display unit " (if prev "before" "after") " this one"))
+      (switch-to-buffer (find-file-noselect (car (gethash start-date org-journal--dates))))
+      (org-journal--narrow-to-display-selection start-date))))
+
+;;;###autoload
+(defun org-journal-next-display-type (&optional repeat)
+  "Go to the next journal display (e.g. next week or month).
+
+With prefix, move multiple journal display periods."
+  (interactive "P")
+  (org-journal--next-display-type repeat))
+
+;;;###autoload
+(defun org-journal-previous-display-type (&optional repeat)
+  "Go to the previous journal display (e.g. prev week or month).
+
+With prefix, move multiple journal display periods."
+  (interactive "P")
+  (org-journal--next-display-type repeat t)
+  (while (org-up-heading-safe)))
 
 
 ;;; Journal search facilities
@@ -1850,28 +1941,30 @@ If STR is empty, search for all entries using `org-journal-time-prefix'."
     (dolist (fname (reverse files))
       (setq result (org-journal--with-journal
                        fname
-                     (when org-journal-enable-encryption
+                     (save-restriction
+                       (widen)
+                       (when org-journal-enable-encryption
+                         (goto-char (point-min))
+                         (while (search-forward ":crypt:" nil t)
+                           (org-decrypt-entry)))
                        (goto-char (point-min))
-                       (while (search-forward ":crypt:" nil t)
-                         (org-decrypt-entry)))
-                     (goto-char (point-min))
-                     (while (funcall org-journal-search-forward-fn str nil t)
-                       (push
-                        (list
-                         (let ((date
-                                (if (org-journal--daily-p)
-                                    (org-journal--file-name->calendar-date fname)
-                                  (save-excursion
-                                    (when (re-search-backward org-journal--created-re nil t)
-                                      (when (= (save-excursion (org-back-to-heading) (org-outline-level)) 1)
-                                        (org-journal--entry-date->calendar-date)))))))
-                           (when date
-                             (org-journal--calendar-date->time date)))
-                         (- (point) (length str))
-                         (buffer-substring-no-properties
-                          (line-beginning-position)
-                          (line-end-position)))
-                        result))
+                       (while (funcall org-journal-search-forward-fn str nil t)
+                         (push
+                          (list
+                           (let ((date
+                                  (if (org-journal--daily-p)
+                                      (org-journal--file-name->calendar-date fname)
+                                    (save-excursion
+                                      (when (re-search-backward org-journal--created-re nil t)
+                                        (when (= (save-excursion (org-back-to-heading) (org-outline-level)) 1)
+                                          (org-journal--entry-date->calendar-date)))))))
+                             (when date
+                               (org-journal--calendar-date->time date)))
+                           (- (point) (length str))
+                           (buffer-substring-no-properties
+                            (line-beginning-position)
+                            (line-end-position)))
+                          result)))
                      result))
       (when result
         (mapc (lambda (res) (push res results)) result)))
@@ -2020,6 +2113,63 @@ enabling encryption by default."
   (add-hook org-journal-encrypt-on
             'org-journal-encryption-hook
             nil t))
+
+(defun org-journal--display-dates-equalp (day1 day2)
+  "DAY1 and DAY2 are within the same `org-journal-display-type`."
+  (pcase org-journal-display-type
+    (`daily (= day1 day2))
+    (`weekly
+     (let ((week-adjust (% org-journal-start-on-weekday 7))
+           (date1 (calendar-absolute-from-gregorian day1))
+           (date2 (calendar-absolute-from-gregorian day2)))
+       (= (/ (- date1 week-adjust) 7) (/ (- date2 week-adjust) 7))))
+    (`monthly (and (= (car day1) (car day2)) (= (nth 2 day1) (nth 2 day2))))
+    (`yearly (= (nth 2 day1) (nth 2 day2)))
+    (_ nil)))
+
+(defun org-journal--narrow-to-display-selection (&optional time)
+  "Narrow the buffer to one `org-journal-display-type` period.
+
+Narrows around TIME if set, otherwise around the current point."
+  (interactive)
+  (when (and org-journal-display-type (org-journal-is-journal))
+    (let (display-start-point display-end-point first-date last-date)
+
+      ;; Get the date ("(mm dd yyyy)" format) at point, if not already passed in
+      (or time (setq time (org-journal--entry-date->calendar-date t)))
+
+      ;; We need the first entry of our display period, and the first entry
+      ;; _after_ our display period: we'll display between those 2 points.
+      ;; Search through the list until we find an entry in our display
+      ;; period. Then keep going until we find one outside it, then quit.
+      (catch 'done
+        (dolist (date (org-journal--list-dates))
+          (if (org-journal--display-dates-equalp date time)
+              (or first-date (setq first-date date))
+            (when first-date (throw 'done (setq last-date date))))))
+
+      (save-excursion
+        (widen)
+        (goto-char (point-min))
+
+        ;; Now turn those dates into points within the file.
+        ;; If one can't be found we'll use the end of the buffer.
+        (and first-date
+             (org-journal--search-forward-created first-date nil t)
+             (org-up-heading-safe)) ;; move up from PROPERTIES drawer
+        (setq display-start-point (point))
+
+        (or (and last-date
+                 (org-journal--search-forward-created last-date nil t)
+                 (or (org-up-heading-safe) t)
+                 (setq display-end-point (1- (point))))
+            (setq display-end-point (1+ (buffer-size))))
+
+        ;; Narrow to the display period and then fold per user's settings
+        (narrow-to-region display-start-point display-end-point)
+        (if (and org-journal-hide-entries-p (org-journal--time-entry-level))
+            (outline-hide-sublevels (org-journal--time-entry-level))
+          (org-journal--finalize-view))))))
 
 (provide 'org-journal)
 
