@@ -244,13 +244,20 @@ By default, this is an org-mode sub-heading."
   :type 'string)
 
 (defcustom org-journal-hide-entries-p t
-  "Controls what information in the current journal file is shown or hidden when a new entry is created:
-   - If nil, the full text of all entries will be displayed.
-   - If 'previous and journal type is not daily, previous dates will be shown but not the titles of their individual journal entries; the titles of journal entries for the current date will be shown but not their text.
-   - Any other value will show the titles of all journal entries but not their text.
-   In previous versions, this was a boolean so the default value was t.
+  "How to display previous entries on entry creation.
 
-  'previous is probably only helpful if you have many journal entries in each day or want to hide the headings of entries from previous days."
+If nil, the full text of all entries will be displayed.
+
+If 'previous and `org-journal-file-type` is not 'daily, previous dates will
+be shown but not the titles of their individual journal entries; the titles
+of journal entries for the current date will be shown but not their text.
+This is probably only helpful if you have many journal entries in each day
+or want to hide the headings of entries from prevous days.
+
+Any other value (including t) will show the titles of all journal entries
+but not their text.
+
+In org-journal version 2.2 and earlier, this was a boolean."
   :type 'string)
 
 (defcustom org-journal-enable-encryption nil
@@ -873,12 +880,6 @@ hook is run."
       (org-journal--insert-entry time org-extend-today-until-active-p no-timestamp))
 
     (if (and org-journal-hide-entries-p (org-journal--time-entry-level))
-        ;; When hide-entries is set to 'previous AND this is a
-        ;; weekly/monthly/yearly journal, collapse all the previous
-        ;; days to hide their individual journal entries, and show
-        ;; only individual entries (without their text) from today.
-        ;; Otherwise, as long as hide-entries is not nil, list all
-        ;; the previous entries (without their text).
         (if (and (string= org-journal-hide-entries-p 'previous)
                  (not (org-journal--daily-p)))
             (progn
