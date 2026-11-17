@@ -244,8 +244,21 @@ By default, this is an org-mode sub-heading."
   :type 'string)
 
 (defcustom org-journal-hide-entries-p t
-  "If true all but the current entry will be hidden when creating a new one."
-  :type 'boolean)
+  "How to display previous entries on entry creation.
+
+If nil, the full text of all entries will be displayed.
+
+If 'previous and `org-journal-file-type' is not 'daily, previous dates will
+be shown but not the titles of their individual journal entries; the titles
+of journal entries for the current date will be shown but not their text.
+This is probably only helpful if you have many journal entries in each day
+or want to hide the headings of entries from prevous days.
+
+Any other value (including t) will show the titles of all journal entries
+but not their text.
+
+In org-journal version 2.2 and earlier, this was a boolean."
+  :type 'string)
 
 (defcustom org-journal-enable-encryption nil
   "Add `org-crypt-tag-matcher' tag for encrypted entries when non-nil.
@@ -867,7 +880,13 @@ hook is run."
       (org-journal--insert-entry time org-extend-today-until-active-p no-timestamp))
 
     (if (and org-journal-hide-entries-p (org-journal--time-entry-level))
-        (outline-hide-sublevels (org-journal--time-entry-level))
+        (if (and (string= org-journal-hide-entries-p 'previous)
+                 (not (org-journal--daily-p)))
+            (progn
+              (outline-hide-sublevels (max 1 (- (org-journal--time-entry-level) 1)))
+              (outline-show-children (org-journal--time-entry-level)))
+          (outline-hide-sublevels (org-journal--time-entry-level)))
+      ;; Since hide-entries is nil, show the full text of all entries.
       (save-excursion (org-journal--finalize-view)))
 
     (when should-add-entry-p
