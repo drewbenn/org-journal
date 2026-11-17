@@ -248,7 +248,7 @@ By default, this is an org-mode sub-heading."
 
 If nil, the full text of all entries will be displayed.
 
-If 'previous and `org-journal-file-type` is not 'daily, previous dates will
+If 'previous and `org-journal-file-type' is not 'daily, previous dates will
 be shown but not the titles of their individual journal entries; the titles
 of journal entries for the current date will be shown but not their text.
 This is probably only helpful if you have many journal entries in each day
