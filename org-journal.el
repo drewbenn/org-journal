@@ -1563,8 +1563,9 @@ If prev is non-nil open previous entry instead of next."
                  (when org-journal-follow-mode
                    (org-journal-display-entry nil)))))
             ((eq major-mode 'org-journal-mode)
-             (org-journal--open-entry prev)
-             (org-journal--narrow-to-display-selection))
+             (let ((not-at-endp (org-journal--open-entry prev)))
+               (org-journal--narrow-to-display-selection)
+               not-at-endp)) ;; if unable to move, message user
             (t
              (user-error
               (concat "org-journal-" (if prev "previous" "next")
@@ -1631,7 +1632,11 @@ With prefix, move multiple journal display periods."
 With prefix, move multiple journal display periods."
   (interactive "P")
   (org-journal--next-display-type repeat t)
-  (while (org-up-heading-safe)))
+  ;; after narrowing, go to the start of the last day in this display period
+  (goto-char (point-max))
+  (let ((date-level (org-journal--time-entry-level)))
+    (when date-level
+      (while (<= date-level (org-up-heading-safe))))))
 
 
 ;;; Journal search facilities
@@ -2132,7 +2137,7 @@ enabling encryption by default."
 
 Narrows around TIME if set, otherwise around the current point."
   (interactive)
-  (when (and org-journal-display-type (org-journal-is-journal))
+  (when (and org-journal-display-type (eq major-mode 'org-journal-mode))
     (let (display-start-point display-end-point first-date last-date)
 
       ;; Get the date ("(mm dd yyyy)" format) at point, if not already passed in
