@@ -857,7 +857,7 @@ hook is run."
   (org-journal--sanity-checks)
   (org-journal--create-journal-dir)
 
-  (if (and (equal (type-of prefix) 'cons) (equal (car prefix) 16) (org-journal-is-journal))
+  (if (and (equal (type-of prefix) 'cons) (equal (car prefix) 16))
       (org-journal--narrow-to-display-selection) ;; with C-u C-u, narrow around point
     ;; If time is before org-extend-today-until, interpret it as
     ;; part of the previous day:
